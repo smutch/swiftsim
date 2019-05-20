@@ -1421,6 +1421,16 @@ AC_ARG_WITH([hydro],
    [with_hydro="gadget2"]
 )
 
+AC_ARG_WITH([engineering],
+    [AS_HELP_STRING([--with-engineering=<scheme>],
+        [Engineering-style hydrodynamics enabled. Hydrdynamics schemes to use @<:@euler, navier-stokes default: euler@:>@]
+     )],
+     [with_hydro="$withval"],
+     [with_hydro="gadget2"]
+)
+
+with_engineering="no"
+
 case "$with_hydro" in
    gadget2)
       AC_DEFINE([GADGET2_SPH], [1], [Gadget-2 SPH])
@@ -1457,6 +1467,16 @@ case "$with_hydro" in
    ;;
    anarchy-pu)
       AC_DEFINE([ANARCHY_PU_SPH], [1], [ANARCHY (PU) SPH])
+   ;;
+   euler)
+      AC_DEFINE([EULER_ENG_SPH], [1], [Euler Engineering SPH])
+      AC_DEFINE([WITH_ENGINEERING], [1], [Engineering SPH enabled])
+      with_engineering = "yes"
+   ;;
+   navier-stokes)
+      AC_DEFINE([NAV_STOK_SPH], [1], [Navier-Stokes Engineering SPH])
+      AC_DEFINE([WITH_ENGINEERING], [1], [Engineering SPH enabled])
+      with_engineering = "yes"
    ;;
 
 
@@ -1566,7 +1586,7 @@ esac
 #  Equation of state
 AC_ARG_WITH([equation-of-state],
    [AS_HELP_STRING([--with-equation-of-state=<EoS>],
-      [equation of state @<:@ideal-gas, isothermal-gas, planetary default: ideal-gas@:>@]
+      [equation of state @<:@ideal-gas, isothermal-gas, planetary , weakly-compressible, default: ideal-gas@:>@]
    )],
    [with_eos="$withval"],
    [with_eos="ideal-gas"]
@@ -1580,6 +1600,9 @@ case "$with_eos" in
    ;;
    planetary)
       AC_DEFINE([EOS_PLANETARY], [1], [All planetary equations of state])
+   ;;
+   weakly-compressible)
+     AC_DEFINE([EOS_WEAKLY_COMPRESSIBLE], [1], [Weakly compressible equation of state])
    ;;
    *)
       AC_MSG_ERROR([Unknown equation of state: $with_eos])
@@ -2028,6 +2051,7 @@ AC_MSG_RESULT([
    VELOCIraptor enabled : $have_velociraptor
    Particle Logger      : $with_logger
    FoF activated:       : $enable_fof
+   Engineering enabled  : $with_engineering
 
    Hydro scheme       : $with_hydro
    Dimensionality     : $with_dimension

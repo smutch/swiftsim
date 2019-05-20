@@ -122,7 +122,8 @@ const char *engine_policy_names[] = {"none",
                                      "feedback",
                                      "black holes",
                                      "fof search",
-                                     "time-step limiter"};
+                                     "time-step limiter",
+                                     "engineering"};
 
 /** The rank of the engine as a global variable (for messages). */
 int engine_rank;
