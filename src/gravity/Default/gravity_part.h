@@ -47,6 +47,11 @@ struct gpart {
   /* Particle group ID and size in the FOF. */
   size_t group_id, group_size;
 
+#ifdef WITH_LOGGER
+  /* Additional data for the particle logger */
+  struct logger_part_data logger_data;
+#endif
+
 #ifdef SWIFT_DEBUG_CHECKS
 
   /* Numer of gparts this gpart interacted with */

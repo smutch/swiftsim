@@ -4682,7 +4682,9 @@ void runner_do_logger(struct runner *r, struct cell *c, int timer) {
   const struct engine *e = r->e;
   struct part *restrict parts = c->hydro.parts;
   struct xpart *restrict xparts = c->hydro.xparts;
+  struct gpart *restrict gparts = c->grav.parts;
   const int count = c->hydro.count;
+  const int gcount = c->grav.count;
 
   /* Anything to do here? */
   if (!cell_is_starting_hydro(c, e) && !cell_is_starting_gravity(c, e)) return;
@@ -4705,7 +4707,7 @@ void runner_do_logger(struct runner *r, struct cell *c, int timer) {
        * debugging checks */
       if (part_is_starting(p, e)) {
 
-        if (logger_should_write(&xp->logger_data, e->logger)) {
+        if (logger_should_write(&xp->logger_data, e->logger->delta_step)) {
           /* Write particle */
           /* Currently writing everything, should adapt it through time */
           logger_log_part(e->logger, p,
@@ -4725,9 +4727,41 @@ void runner_do_logger(struct runner *r, struct cell *c, int timer) {
           xp->logger_data.steps_since_last_output += 1;
       }
     }
-  }
 
-  if (c->grav.count > 0) error("gparts not implemented");
+    /* Loop over the gparts in this cell. */
+    for (int k = 0; k < gcount; k++) {
+
+      /* Get a handle on the part. */
+      struct gpart *restrict gp = &gparts[k];
+
+      /* Write only the dark matter particles */
+      if (gp->type != swift_type_dark_matter)
+	continue;
+
+      /* If particle needs to be log */
+      /* This is the same function than part_is_active, except for
+       * debugging checks */
+      if (gpart_is_starting(gp, e)) {
+
+        if (logger_should_write(&gp->logger_data, e->logger->delta_step)) {
+          /* Write particle */
+          /* Currently writing everything, should adapt it through time */
+          logger_log_gpart(e->logger, gp,
+			   logger_mask_data[logger_x].mask |
+			   logger_mask_data[logger_v].mask |
+			   logger_mask_data[logger_a].mask |
+			   logger_mask_data[logger_consts].mask,
+			   &gp->logger_data.last_offset);
+
+          /* Set counter back to zero */
+          gp->logger_data.steps_since_last_output = 0;
+        } else
+          /* Update counter */
+          gp->logger_data.steps_since_last_output += 1;
+      }
+    }
+
+  }
 
   if (c->stars.count > 0) error("sparts not implemented");
 
