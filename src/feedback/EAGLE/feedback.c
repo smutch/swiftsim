@@ -135,7 +135,7 @@ double eagle_feedback_energy_fraction(const struct spart* sp,
  */
 INLINE static void compute_SNII_feedback(
     struct spart* sp, const double star_age, const double dt,
-    const float ngb_gas_mass, const struct feedback_props* feedback_props) {
+    const double ngb_gas_mass, const struct feedback_props* feedback_props) {
 
   /* Time after birth considered for SNII feedback (internal units) */
   const double SNII_wind_delay = feedback_props->SNII_wind_delay;
@@ -147,7 +147,7 @@ INLINE static void compute_SNII_feedback(
       (star_age + 1.0001 * dt) > SNII_wind_delay) {
 
     /* Make sure a star does not do feedback twice! */
-    if (sp->f_E != -1.f) {
+    if (sp->f_E != -1.0) {
 #ifdef SWIFT_DEBUG_CHECKS
       message("Star has already done feedback! sp->id=%lld age=%e d=%e", sp->id,
               star_age, dt);
@@ -207,8 +207,8 @@ INLINE static void compute_SNII_feedback(
  * @param log10_Z log10 of the star metallicity (metal mass fraction).
  * @param props The properties of the feedback model.
  */
-INLINE static void determine_bin_yield_AGB(int* iz_low, int* iz_high, float* dz,
-                                           const float log10_Z,
+INLINE static void determine_bin_yield_AGB(int* iz_low, int* iz_high,
+                                           double* dz, const double log10_Z,
                                            const struct feedback_props* props) {
 
   const double* AGB_Z = props->yield_AGB.metallicity;
@@ -232,21 +232,21 @@ INLINE static void determine_bin_yield_AGB(int* iz_low, int* iz_high, float* dz,
 
       *dz = log10_Z - AGB_Z[*iz_low];
     } else {
-      *dz = 0.f;
+      *dz = 0.0;
     }
 
     /* Normalize offset */
-    const float delta_Z = AGB_Z[*iz_high] - AGB_Z[*iz_low];
+    const double delta_Z = AGB_Z[*iz_high] - AGB_Z[*iz_low];
 
-    if (delta_Z > 0.f)
+    if (delta_Z > 0.0)
       *dz /= delta_Z;
     else
-      *dz = 0.f;
+      *dz = 0.0;
 
   } else {
     *iz_low = 0;
     *iz_high = 0;
-    *dz = 0.f;
+    *dz = 0.0;
   }
 }
 
@@ -261,7 +261,7 @@ INLINE static void determine_bin_yield_AGB(int* iz_low, int* iz_high, float* dz,
  * @param props The properties of the feedback model.
  */
 INLINE static void determine_bin_yield_SNII(
-    int* iz_low, int* iz_high, float* dz, const float log10_Z,
+    int* iz_low, int* iz_high, double* dz, const double log10_Z,
     const struct feedback_props* props) {
 
   const double* SNII_Z = props->yield_SNII.metallicity;
@@ -285,21 +285,21 @@ INLINE static void determine_bin_yield_SNII(
 
       *dz = log10_Z - SNII_Z[*iz_low];
     } else {
-      *dz = 0.f;
+      *dz = 0.0;
     }
 
     /* Normalize offset */
-    const float delta_Z = SNII_Z[*iz_high] - SNII_Z[*iz_low];
+    const double delta_Z = SNII_Z[*iz_high] - SNII_Z[*iz_low];
 
-    if (delta_Z > 0.f)
+    if (delta_Z > 0.0)
       *dz = *dz / delta_Z;
     else
-      *dz = 0.f;
+      *dz = 0.0;
 
   } else {
     *iz_low = 0;
     *iz_high = 0;
-    *dz = 0.f;
+    *dz = 0.0;
   }
 }
 
@@ -315,8 +315,8 @@ INLINE static void determine_bin_yield_SNII(
  * @param star_age_Gyr age of star in Gyr
  * @param dt_Gyr timestep dt in Gyr
  */
-INLINE static void evolve_SNIa(const float log10_min_mass,
-                               const float log10_max_mass,
+INLINE static void evolve_SNIa(const double log10_min_mass,
+                               const double log10_max_mass,
                                const struct feedback_props* props,
                                struct spart* sp, double star_age_Gyr,
                                double dt_Gyr) {
@@ -333,16 +333,16 @@ INLINE static void evolve_SNIa(const float log10_min_mass,
    * and use updated values for the star's age and timestep in this function */
   if (log10_max_mass > props->log10_SNIa_max_mass_msun) {
 
-    const float Z = chemistry_get_total_metal_mass_fraction_for_feedback(sp);
-    const float max_mass = exp10f(props->log10_SNIa_max_mass_msun);
-    const float lifetime_Gyr = lifetime_in_Gyr(max_mass, Z, props);
+    const double Z = chemistry_get_total_metal_mass_fraction_for_feedback(sp);
+    const double max_mass = exp10(props->log10_SNIa_max_mass_msun);
+    const double lifetime_Gyr = lifetime_in_Gyr(max_mass, Z, props);
 
     dt_Gyr = max(star_age_Gyr + dt_Gyr - lifetime_Gyr, 0.);
     star_age_Gyr = lifetime_Gyr;
   }
 
   /* Compute the number of SNIa */
-  const float num_SNIa = eagle_feedback_number_of_SNIa(
+  const double num_SNIa = eagle_feedback_number_of_SNIa(
       sp, star_age_Gyr, star_age_Gyr + dt_Gyr, props);
 
   /* compute mass of each metal */
@@ -394,8 +394,8 @@ INLINE static void evolve_SNIa(const float log10_min_mass,
  * @param props properties of the feedback model.
  * @param sp spart we are computing feedback from
  */
-INLINE static void evolve_SNII(float log10_min_mass, float log10_max_mass,
-                               float* stellar_yields,
+INLINE static void evolve_SNII(double log10_min_mass, double log10_max_mass,
+                               double* stellar_yields,
                                const struct feedback_props* props,
                                struct spart* sp) {
 
@@ -425,11 +425,12 @@ INLINE static void evolve_SNII(float log10_min_mass, float log10_max_mass,
   /* determine which metallicity bin and offset this star belongs to */
   int iz_low = 0, iz_high = 0, low_index_3d, high_index_3d, low_index_2d,
       high_index_2d;
-  float dz = 0.;
+  double dz = 0.;
   determine_bin_yield_SNII(&iz_low, &iz_high, &dz, log10(Z), props);
 
   /* compute metals produced */
-  float metal_mass_released[chemistry_element_count], metal_mass_released_total;
+  double metal_mass_released[chemistry_element_count],
+      metal_mass_released_total;
   for (int elem = 0; elem < chemistry_element_count; elem++) {
     for (mass_bin_index = low_imf_mass_bin_index;
          mass_bin_index < high_imf_mass_bin_index + 1; mass_bin_index++) {
@@ -483,13 +484,13 @@ INLINE static void evolve_SNII(float log10_min_mass, float log10_max_mass,
                     eagle_imf_integration_yield_weight, stellar_yields, props);
 
   /* yield normalization */
-  float mass_ejected, mass_released;
+  double mass_ejected, mass_released;
 
   /* zero all negative values */
   for (int i = 0; i < chemistry_element_count; i++)
-    metal_mass_released[i] = max(metal_mass_released[i], 0.f);
+    metal_mass_released[i] = max(metal_mass_released[i], 0.0);
 
-  metal_mass_released_total = max(metal_mass_released_total, 0.f);
+  metal_mass_released_total = max(metal_mass_released_total, 0.0);
 
   /* compute the total metal mass ejected from the star*/
   for (mass_bin_index = low_imf_mass_bin_index;
@@ -518,7 +519,7 @@ INLINE static void evolve_SNII(float log10_min_mass, float log10_max_mass,
   if (mass_released > 0) {
     /* Set normalisation factor. Note additional multiplication by the star
      * initial mass as tables are per initial mass */
-    const float norm_factor = sp->mass_init * mass_ejected / mass_released;
+    const double norm_factor = sp->mass_init * mass_ejected / mass_released;
 
     for (int i = 0; i < chemistry_element_count; i++) {
       sp->feedback_data.to_distribute.metal_mass[i] +=
@@ -551,8 +552,8 @@ INLINE static void evolve_SNII(float log10_min_mass, float log10_max_mass,
  * @param props Properties of the feedback model.
  * @param sp spart we are computing feedback for.
  */
-INLINE static void evolve_AGB(const float log10_min_mass, float log10_max_mass,
-                              float* stellar_yields,
+INLINE static void evolve_AGB(const double log10_min_mass,
+                              double log10_max_mass, double* stellar_yields,
                               const struct feedback_props* props,
                               struct spart* sp) {
 
@@ -577,11 +578,12 @@ INLINE static void evolve_AGB(const float log10_min_mass, float log10_max_mass,
   /* determine which metallicity bin and offset this star belongs to */
   int iz_low = 0, iz_high = 0, low_index_3d, high_index_3d, low_index_2d,
       high_index_2d;
-  float dz = 0.f;
+  double dz = 0.0;
   determine_bin_yield_AGB(&iz_low, &iz_high, &dz, log10(Z), props);
 
   /* compute metals produced */
-  float metal_mass_released[chemistry_element_count], metal_mass_released_total;
+  double metal_mass_released[chemistry_element_count],
+      metal_mass_released_total;
   for (int elem = 0; elem < chemistry_element_count; elem++) {
     for (mass_bin_index = low_imf_mass_bin_index;
          mass_bin_index < high_imf_mass_bin_index + 1; mass_bin_index++) {
@@ -634,13 +636,13 @@ INLINE static void evolve_AGB(const float log10_min_mass, float log10_max_mass,
                     eagle_imf_integration_yield_weight, stellar_yields, props);
 
   /* yield normalization */
-  float mass_ejected, mass_released;
+  double mass_ejected, mass_released;
 
   /* zero all negative values */
   for (int i = 0; i < chemistry_element_count; i++)
-    metal_mass_released[i] = max(metal_mass_released[i], 0.f);
+    metal_mass_released[i] = max(metal_mass_released[i], 0.0);
 
-  metal_mass_released_total = max(metal_mass_released_total, 0.f);
+  metal_mass_released_total = max(metal_mass_released_total, 0.0);
 
   /* compute the total metal mass ejected from the star */
   for (mass_bin_index = low_imf_mass_bin_index;
@@ -670,7 +672,7 @@ INLINE static void evolve_AGB(const float log10_min_mass, float log10_max_mass,
 
     /* Set normalisation factor. Note additional multiplication by the stellar
      * initial mass as tables are per initial mass */
-    const float norm_factor = sp->mass_init * mass_ejected / mass_released;
+    const double norm_factor = sp->mass_init * mass_ejected / mass_released;
 
     for (int i = 0; i < chemistry_element_count; i++) {
       sp->feedback_data.to_distribute.metal_mass[i] +=
@@ -710,7 +712,7 @@ void compute_stellar_evolution(const struct feedback_props* feedback_props,
 #endif
 
   /* Allocate temporary array for calculating imf weights */
-  float stellar_yields[eagle_feedback_N_imf_bins];
+  double stellar_yields[eagle_feedback_N_imf_bins];
 
   /* Convert dt and stellar age from internal units to Gyr. */
   const double Gyr_in_cgs = 1e9 * 365. * 24. * 3600.;
@@ -720,11 +722,11 @@ void compute_stellar_evolution(const struct feedback_props* feedback_props,
   const double star_age_Gyr = age * conversion_factor;
 
   /* Get the metallicity */
-  const float Z = chemistry_get_total_metal_mass_fraction_for_feedback(sp);
+  const double Z = chemistry_get_total_metal_mass_fraction_for_feedback(sp);
 
   /* Properties collected in the stellar density loop. */
-  const float ngb_gas_mass = sp->feedback_data.to_collect.ngb_mass;
-  const float enrichment_weight_inv =
+  const double ngb_gas_mass = sp->feedback_data.to_collect.ngb_mass;
+  const double enrichment_weight_inv =
       sp->feedback_data.to_collect.enrichment_weight_inv;
 
   /* Now we start filling the data structure for information to apply to the
@@ -734,8 +736,8 @@ void compute_stellar_evolution(const struct feedback_props* feedback_props,
   feedback_reset_feedback(sp, feedback_props);
 
   /* Update the weights used for distribution */
-  const float enrichment_weight =
-      (enrichment_weight_inv != 0.f) ? 1.f / enrichment_weight_inv : 0.f;
+  const double enrichment_weight =
+      (enrichment_weight_inv != 0.0) ? 1.0 / enrichment_weight_inv : 0.0;
   sp->feedback_data.to_distribute.enrichment_weight = enrichment_weight;
 
   /* Compute properties of the stochastic SNII feedback model. */
@@ -745,9 +747,9 @@ void compute_stellar_evolution(const struct feedback_props* feedback_props,
 
   /* Calculate mass of stars that has died from the star's birth up to the
    * beginning and end of timestep */
-  const float max_dying_mass_Msun =
+  const double max_dying_mass_Msun =
       dying_mass_msun(star_age_Gyr, Z, feedback_props);
-  const float min_dying_mass_Msun =
+  const double min_dying_mass_Msun =
       dying_mass_msun(star_age_Gyr + dt_Gyr, Z, feedback_props);
 
 #ifdef SWIFT_DEBUG_CHECK
@@ -763,8 +765,8 @@ void compute_stellar_evolution(const struct feedback_props* feedback_props,
   if (min_dying_mass_Msun == max_dying_mass_Msun) return;
 
   /* Life is better in log */
-  const float log10_max_dying_mass_Msun = log10f(max_dying_mass_Msun);
-  const float log10_min_dying_mass_Msun = log10f(min_dying_mass_Msun);
+  const double log10_max_dying_mass_Msun = log10(max_dying_mass_Msun);
+  const double log10_min_dying_mass_Msun = log10(min_dying_mass_Msun);
 
   /* Compute elements, energy and momentum to distribute from the
    *  three channels SNIa, SNII, AGB */
@@ -922,7 +924,7 @@ void feedback_props_init(struct feedback_props* fp,
             chemistry_get_element_name((enum chemistry_element)elem));
 
     fp->SNII_yield_factor[elem] =
-        parser_get_opt_param_float(params, buffer, 1.f);
+        parser_get_opt_param_float(params, buffer, 1.0);
   }
 
   /* Properties of the SNIa enrichment model -------------------------------- */
@@ -936,7 +938,7 @@ void feedback_props_init(struct feedback_props* fp,
       parser_get_param_float(params, "EAGLEFeedback:SNIa_efficiency_p_Msun");
   fp->SNIa_timescale_Gyr =
       parser_get_param_float(params, "EAGLEFeedback:SNIa_timescale_Gyr");
-  fp->SNIa_timescale_Gyr_inv = 1.f / fp->SNIa_timescale_Gyr;
+  fp->SNIa_timescale_Gyr_inv = 1.0 / fp->SNIa_timescale_Gyr;
 
   /* Energy released by supernova type Ia */
   fp->E_SNIa_cgs =
@@ -1006,7 +1008,7 @@ void feedback_props_init(struct feedback_props* fp,
   read_yield_tables(fp);
 
   /* Set yield_mass_bins array */
-  const float imf_log10_mass_bin_size =
+  const double imf_log10_mass_bin_size =
       (fp->log10_imf_max_mass_msun - fp->log10_imf_min_mass_msun) /
       (eagle_feedback_N_imf_bins - 1);
 

@@ -423,7 +423,7 @@ void cooling_cool_part(const struct phys_const *phys_const,
   abundance_ratio_to_solar(p, cooling, abundance_ratio);
 
   /* Get the Hydrogen and Helium mass fractions */
-  const float *const metal_fraction =
+  const double *const metal_fraction =
       chemistry_get_metal_mass_fraction_for_cooling(p);
   const float XH = metal_fraction[chemistry_element_H];
   const float XHe = metal_fraction[chemistry_element_He];
@@ -600,7 +600,7 @@ float cooling_get_temperature(
   const double u_cgs = u * cooling->internal_energy_to_cgs;
 
   /* Get the Hydrogen and Helium mass fractions */
-  const float *const metal_fraction =
+  const double *const metal_fraction =
       chemistry_get_metal_mass_fraction_for_cooling(p);
   const float XH = metal_fraction[chemistry_element_H];
   const float XHe = metal_fraction[chemistry_element_He];

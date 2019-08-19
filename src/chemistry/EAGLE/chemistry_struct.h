@@ -53,16 +53,16 @@ struct chemistry_global_data {
 struct chemistry_part_data {
 
   /*! Fraction of the particle mass in a given element */
-  float metal_mass_fraction[chemistry_element_count];
+  double metal_mass_fraction[chemistry_element_count];
 
   /*! Fraction of the particle mass in *all* metals */
-  float metal_mass_fraction_total;
+  double metal_mass_fraction_total;
 
   /*! Smoothed fraction of the particle mass in a given element */
-  float smoothed_metal_mass_fraction[chemistry_element_count];
+  double smoothed_metal_mass_fraction[chemistry_element_count];
 
   /*! Smoothed fraction of the particle mass in *all* metals */
-  float smoothed_metal_mass_fraction_total;
+  double smoothed_metal_mass_fraction_total;
 
   /*! Mass coming from SNIa */
   float mass_from_SNIa;

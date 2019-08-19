@@ -104,10 +104,10 @@ runner_iact_nonsym_feedback_apply(const float r2, const float *dx,
   kernel_eval(ui, &wi);
 
   /* Gas particle density */
-  const float rho_j = hydro_get_comoving_density(pj);
+  const double rho_j = hydro_get_comoving_density(pj);
 
   /* Compute weighting for distributing feedback quantities */
-  float Omega_frac;
+  double Omega_frac;
   if (rho_j != 0.f) {
     Omega_frac = si->feedback_data.to_distribute.enrichment_weight * wi / rho_j;
   } else {

@@ -120,32 +120,32 @@ struct feedback_props {
   /* ------------- SNII parameters    --------------- */
 
   /* Array of adjustment factors for SNII  */
-  float SNII_yield_factor[chemistry_element_count];
+  double SNII_yield_factor[chemistry_element_count];
 
   /* ------------- SNIa parameters    --------------- */
 
   /*! Efficiency of the SNIa model */
-  float SNIa_efficiency;
+  double SNIa_efficiency;
 
   /*! Time-scale of the SNIa decay function in Giga-years */
-  float SNIa_timescale_Gyr;
+  double SNIa_timescale_Gyr;
 
   /*! Inverse of time-scale of the SNIa decay function in Giga-years */
-  float SNIa_timescale_Gyr_inv;
+  double SNIa_timescale_Gyr_inv;
 
   /*! Log 10 of the maximal mass used for SNIa feedback (in solar masses) */
-  float log10_SNIa_max_mass_msun;
+  double log10_SNIa_max_mass_msun;
 
   /*! Energy released by one supernova type II in cgs units */
   double E_SNIa_cgs;
 
   /*! Energy released by one supernova type II in internal units */
-  float E_SNIa;
+  double E_SNIa;
 
   /* ------------- AGB parameters    ---------------- */
 
   /*! Specific kinetic energy injected from AGB ejectas (in internal units). */
-  float AGB_ejecta_specific_kinetic_energy;
+  double AGB_ejecta_specific_kinetic_energy;
 
   /* ------------- Conversion factors --------------- */
 
@@ -160,57 +160,57 @@ struct feedback_props {
   double rho_to_n_cgs;
 
   /*! Conversion factor from temperature to internal energy */
-  float temp_to_u_factor;
+  double temp_to_u_factor;
 
   /* ------------- Parameters for IMF --------------- */
 
   /*! Array to store calculated IMF */
-  float *imf;
+  double *imf;
 
   /*! Arrays to store IMF mass bins */
-  float *imf_mass_bin;
+  double *imf_mass_bin;
 
   /*! Arrays to store IMF mass bins (log10)*/
-  float *imf_mass_bin_log10;
+  double *imf_mass_bin_log10;
 
   /*! Minimal stellar mass considered by the IMF (in solar masses) */
-  float imf_min_mass_msun;
+  double imf_min_mass_msun;
 
   /*! Maximal stellar mass considered by the IMF (in solar masses) */
-  float imf_max_mass_msun;
+  double imf_max_mass_msun;
 
   /*! Log 10 of the minimal stellar mass considered by the IMF (in solar masses)
    */
-  float log10_imf_min_mass_msun;
+  double log10_imf_min_mass_msun;
 
   /*! Log 10 of the maximal stellar mass considered by the IMF (in solar masses)
    */
-  float log10_imf_max_mass_msun;
+  double log10_imf_max_mass_msun;
 
   /* ------------ SNe feedback properties ------------ */
 
   /*! Log 10 of the minimal stellar mass considered for SNII feedback (in solar
    * masses) */
-  float log10_SNII_min_mass_msun;
+  double log10_SNII_min_mass_msun;
 
   /*! Log 10 of the maximal stellar mass considered for SNII feedback (in solar
    * masses) */
-  float log10_SNII_max_mass_msun;
+  double log10_SNII_max_mass_msun;
 
   /*! Number of type II supernovae per solar mass */
-  float num_SNII_per_msun;
+  double num_SNII_per_msun;
 
   /*! Wind delay time for SNII */
   double SNII_wind_delay;
 
   /*! Temperature increase induced by SNe feedback */
-  float SNe_deltaT_desired;
+  double SNe_deltaT_desired;
 
   /*! Energy released by one supernova type II in cgs units */
   double E_SNII_cgs;
 
   /*! Energy released by one supernova type II in internal units */
-  float E_SNII;
+  double E_SNII;
 
   /*! Minimal energy fraction for supernova type II feedback */
   double f_E_min;

@@ -55,7 +55,7 @@ __attribute__((always_inline)) INLINE static void abundance_ratio_to_solar(
     float ratio_solar[eagle_cooling_N_abundances]) {
 
   /* Get the individual metal mass fractions from the particle */
-  const float *const metal_fraction =
+  const double *const metal_fraction =
       chemistry_get_metal_mass_fraction_for_cooling(p);
 
   ratio_solar[0] = metal_fraction[chemistry_element_H] *

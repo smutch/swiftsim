@@ -50,13 +50,13 @@ struct feedback_spart_data {
       float enrichment_weight;
 
       /*! Mass released */
-      float mass;
+      double mass;
 
       /*! Total metal mass released */
-      float total_metal_mass;
+      double total_metal_mass;
 
       /*! Total mass released by each element */
-      float metal_mass[chemistry_element_count];
+      double metal_mass[chemistry_element_count];
 
       /*! Total mass released due to SNIa */
       float mass_from_SNIa;

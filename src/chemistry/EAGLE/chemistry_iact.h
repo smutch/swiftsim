@@ -65,22 +65,22 @@ __attribute__((always_inline)) INLINE static void runner_iact_chemistry(
   /* Compute contribution to the smooth metallicity */
   for (int i = 0; i < chemistry_element_count; i++) {
     chi->smoothed_metal_mass_fraction[i] +=
-        mj * chj->metal_mass_fraction[i] * wi;
+        mj * chj->metal_mass_fraction[i] * (double)wi;
     chj->smoothed_metal_mass_fraction[i] +=
-        mi * chi->metal_mass_fraction[i] * wj;
+        mi * chi->metal_mass_fraction[i] * (double)wj;
   }
 
   // Smooth metal mass fraction of all metals
   chi->smoothed_metal_mass_fraction_total +=
-      mj * chj->metal_mass_fraction_total * wi;
+      mj * chj->metal_mass_fraction_total * (double)wi;
   chj->smoothed_metal_mass_fraction_total +=
-      mi * chi->metal_mass_fraction_total * wj;
+      mi * chi->metal_mass_fraction_total * (double)wj;
 
   // Smooth iron mass fraction from SNIa
   chi->smoothed_iron_mass_fraction_from_SNIa +=
-      mj * chj->iron_mass_fraction_from_SNIa * wi;
+      mj * chj->iron_mass_fraction_from_SNIa * (double)wi;
   chj->smoothed_iron_mass_fraction_from_SNIa +=
-      mi * chi->iron_mass_fraction_from_SNIa * wj;
+      mi * chi->iron_mass_fraction_from_SNIa * (double)wj;
 }
 
 /**
@@ -118,16 +118,16 @@ __attribute__((always_inline)) INLINE static void runner_iact_nonsym_chemistry(
   /* Compute contribution to the smooth metallicity */
   for (int i = 0; i < chemistry_element_count; i++) {
     chi->smoothed_metal_mass_fraction[i] +=
-        mj * chj->metal_mass_fraction[i] * wi;
+        mj * chj->metal_mass_fraction[i] * (double)wi;
   }
 
   // Smooth metal mass fraction of all metals
   chi->smoothed_metal_mass_fraction_total +=
-      mj * chj->metal_mass_fraction_total * wi;
+      mj * chj->metal_mass_fraction_total * (double)wi;
 
   // Smooth iron mass fraction from SNIa
   chi->smoothed_iron_mass_fraction_from_SNIa +=
-      mj * chj->iron_mass_fraction_from_SNIa * wi;
+      mj * chj->iron_mass_fraction_from_SNIa * (double)wi;
 }
 
 #endif /* SWIFT_EAGLE_CHEMISTRY_IACT_H */

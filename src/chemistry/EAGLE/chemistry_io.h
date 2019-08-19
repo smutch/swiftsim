@@ -59,24 +59,24 @@ INLINE static int chemistry_write_particles(const struct part* parts,
 
   /* List what we want to write */
   list[0] = io_make_output_field(
-      "ElementMassFractions", FLOAT, chemistry_element_count,
+      "ElementMassFractions", DOUBLE, chemistry_element_count,
       UNIT_CONV_NO_UNITS, 0.f, parts, chemistry_data.metal_mass_fraction,
       "Fractions of the particles' masses that are in the given element");
 
   list[1] = io_make_output_field(
-      "SmoothedElementMassFractions", FLOAT, chemistry_element_count,
+      "SmoothedElementMassFractions", DOUBLE, chemistry_element_count,
       UNIT_CONV_NO_UNITS, 0.f, parts,
       chemistry_data.smoothed_metal_mass_fraction,
       "Smoothed fractions of the particles' masses that are "
       "in the given element");
 
   list[2] = io_make_output_field(
-      "MetalMassFractions", FLOAT, 1, UNIT_CONV_NO_UNITS, 0.f, parts,
+      "MetalMassFractions", DOUBLE, 1, UNIT_CONV_NO_UNITS, 0.f, parts,
       chemistry_data.metal_mass_fraction_total,
       "Fractions of the particles' masses that are in metals");
 
   list[3] = io_make_output_field(
-      "SmoothedMetalMassFractions", FLOAT, 1, UNIT_CONV_NO_UNITS, 0.f, parts,
+      "SmoothedMetalMassFractions", DOUBLE, 1, UNIT_CONV_NO_UNITS, 0.f, parts,
       chemistry_data.smoothed_metal_mass_fraction_total,
       "Smoothed fractions of the particles masses that are in metals");
 

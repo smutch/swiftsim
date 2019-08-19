@@ -234,7 +234,7 @@ INLINE static int star_formation_is_star_forming(
 
   const double Z =
       chemistry_get_total_metal_mass_fraction_for_star_formation(p);
-  const float* const metal_fraction =
+  const double* const metal_fraction =
       chemistry_get_metal_mass_fraction_for_star_formation(p);
   const double X_H = metal_fraction[chemistry_element_H];
   const double n_H = physical_density * X_H;
@@ -282,7 +282,7 @@ INLINE static void star_formation_compute_SFR(
 
   /* Hydrogen number density of this particle */
   const double physical_density = hydro_get_physical_density(p, cosmo);
-  const float* const metal_fraction =
+  const double* const metal_fraction =
       chemistry_get_metal_mass_fraction_for_star_formation(p);
   const double X_H = metal_fraction[chemistry_element_H];
   const double n_H = physical_density * X_H / phys_const->const_proton_mass;

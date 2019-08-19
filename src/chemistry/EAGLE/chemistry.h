@@ -92,15 +92,15 @@ __attribute__((always_inline)) INLINE static void chemistry_end_density(
   const float h = p->h;
   const float h_inv = 1.0f / h; /* 1/h */
   const float rho = hydro_get_comoving_density(p);
-  const float factor = pow_dimension(h_inv) / rho; /* 1 / (h^d * rho) */
-  const float m = hydro_get_mass(p);
+  const double factor = pow_dimension(h_inv) / rho; /* 1 / (h^d * rho) */
+  const double m = hydro_get_mass(p);
 
   struct chemistry_part_data* cpd = &p->chemistry_data;
 
   for (int i = 0; i < chemistry_element_count; i++) {
     /* Final operation on the density (add self-contribution). */
     cpd->smoothed_metal_mass_fraction[i] +=
-        m * cpd->metal_mass_fraction[i] * kernel_root;
+        m * cpd->metal_mass_fraction[i] * (double)kernel_root;
 
     /* Finish the calculation by inserting the missing h-factors */
     cpd->smoothed_metal_mass_fraction[i] *= factor;
@@ -282,7 +282,7 @@ __attribute__((always_inline)) INLINE static float chemistry_timestep(
  *
  * @param sp Pointer to the particle data.
  */
-__attribute__((always_inline)) INLINE static float
+__attribute__((always_inline)) INLINE static double
 chemistry_get_total_metal_mass_fraction_for_feedback(
     const struct spart* restrict sp) {
 
@@ -297,7 +297,7 @@ chemistry_get_total_metal_mass_fraction_for_feedback(
  *
  * @param p Pointer to the particle data.
  */
-__attribute__((always_inline)) INLINE static float
+__attribute__((always_inline)) INLINE static double
 chemistry_get_total_metal_mass_fraction_for_cooling(
     const struct part* restrict p) {
 
@@ -312,7 +312,7 @@ chemistry_get_total_metal_mass_fraction_for_cooling(
  *
  * @param p Pointer to the particle data.
  */
-__attribute__((always_inline)) INLINE static float const*
+__attribute__((always_inline)) INLINE static double const*
 chemistry_get_metal_mass_fraction_for_cooling(const struct part* restrict p) {
 
   return p->chemistry_data.smoothed_metal_mass_fraction;
@@ -326,7 +326,7 @@ chemistry_get_metal_mass_fraction_for_cooling(const struct part* restrict p) {
  *
  * @param p Pointer to the particle data.
  */
-__attribute__((always_inline)) INLINE static float
+__attribute__((always_inline)) INLINE static double
 chemistry_get_total_metal_mass_fraction_for_star_formation(
     const struct part* restrict p) {
 
@@ -341,7 +341,7 @@ chemistry_get_total_metal_mass_fraction_for_star_formation(
  *
  * @param p Pointer to the particle data.
  */
-__attribute__((always_inline)) INLINE static float const*
+__attribute__((always_inline)) INLINE static double const*
 chemistry_get_metal_mass_fraction_for_star_formation(
     const struct part* restrict p) {
 
