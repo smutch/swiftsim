@@ -23,7 +23,7 @@
 #include "chemistry.h"
 #include "inline.h"
 
-static const float log10_min_metallicity = -20;
+static const double log10_min_metallicity = -20;
 
 /*! Length of the name fields in the yields tables */
 #define eagle_feedback_element_name_length 15
@@ -642,7 +642,7 @@ INLINE static void compute_yields(struct feedback_props *feedback_props) {
   /* Declare temporary tables to accumulate yields */
   double SNII_yield[eagle_feedback_SNII_N_masses];
   double AGB_yield[eagle_feedback_AGB_N_masses];
-  float result;
+  double result;
 
   /* Resample yields for each element tracked in EAGLE */
   int element_index = 0;
@@ -762,7 +762,7 @@ INLINE static void compute_ejecta(struct feedback_props *feedback_props) {
   /* Declare temporary tables to accumulate yields */
   double SNII_ejecta[eagle_feedback_SNII_N_masses];
   double AGB_ejecta[eagle_feedback_AGB_N_masses];
-  float result;
+  double result;
 
   int flat_index;
 

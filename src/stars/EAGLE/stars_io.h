@@ -124,7 +124,7 @@ INLINE static void stars_write_particles(const struct spart *sparts,
       "Peculiar velocities of the particles. This is a * dx/dt where x is the "
       "co-moving position of the particles.");
 
-  list[2] = io_make_output_field("Masses", FLOAT, 1, UNIT_CONV_MASS, 0.f,
+  list[2] = io_make_output_field("Masses", DOUBLE, 1, UNIT_CONV_MASS, 0.f,
                                  sparts, mass,
                                  "Masses of the particles at the current point "
                                  "in time (i.e. after stellar losses");
@@ -143,8 +143,8 @@ INLINE static void stars_write_particles(const struct spart *sparts,
       "we store the physical density at the birth redshift, no conversion is "
       "needed)");
 
-  list[6] = io_make_output_field("InitialMasses", FLOAT, 1, UNIT_CONV_MASS, 0.f,
-                                 sparts, mass_init,
+  list[6] = io_make_output_field("InitialMasses", DOUBLE, 1, UNIT_CONV_MASS,
+                                 0.f, sparts, mass_init,
                                  "Masses of the star particles at birth time");
 
   if (with_cosmology) {

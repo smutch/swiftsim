@@ -54,10 +54,10 @@ struct spart {
   float v[3];
 
   /*! Star mass */
-  float mass;
+  double mass;
 
   /*! Initial star mass */
-  float mass_init;
+  double mass_init;
 
   /*! Particle smoothing length. */
   float h;
