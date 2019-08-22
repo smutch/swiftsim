@@ -774,13 +774,24 @@ double cosmology_get_delta_time(const struct cosmology *c,
   const double log_a_start = c->log_a_begin + ti_start * c->time_base;
   const double log_a_end = c->log_a_begin + ti_end * c->time_base;
 
-  /* Time between a_begin and a_start */
-  const double t1 = interp_table(c->time_interp_table, log_a_start,
-                                 c->log_a_begin, c->log_a_end);
+  const double a1 = exp(log_a_start);
+  const double a2 = exp(log_a_end);
 
-  /* Time between a_begin and a_end */
-  const double t2 = interp_table(c->time_interp_table, log_a_end,
-                                 c->log_a_begin, c->log_a_end);
+  /* /\* Time between a_begin and a_start *\/ */
+  /* const double t1 = interp_table(c->time_interp_table, log_a_start, */
+  /*                                c->log_a_begin, c->log_a_end); */
+
+  /* /\* Time between a_begin and a_end *\/ */
+  /* const double t2 = interp_table(c->time_interp_table, log_a_end, */
+  /*                                c->log_a_begin, c->log_a_end); */
+
+  const double fac = (1. / c->H0) * (2. / (3. * sqrt(c->Omega_lambda)));
+  const double ratio = c->Omega_lambda / c->Omega_m;
+
+  const double t1 = fac * asinh(sqrt(a1 * a1 * a1 * ratio));
+  const double t2 = fac * asinh(sqrt(a2 * a2 * a2 * ratio));
+
+  return t2 - t1;
 
   return t2 - t1;
 }
@@ -789,27 +800,33 @@ double cosmology_get_delta_time(const struct cosmology *c,
  * @brief Compute the cosmic time (in internal units) between two scale factors
  *
  * @param c The current #cosmology.
- * @param a_start the starting scale factor
- * @param a_end the ending scale factor
+ * @param a1 the starting scale factor
+ * @param a2 the ending scale factor
  */
 double cosmology_get_delta_time_from_scale_factors(const struct cosmology *c,
-                                                   const double a_start,
-                                                   const double a_end) {
+                                                   const double a1,
+                                                   const double a2) {
 
 #ifdef SWIFT_DEBUG_CHECKS
   if (a_end < a_start) error("a_end must be >= a_start");
 #endif
 
-  const double log_a_start = log(a_start);
-  const double log_a_end = log(a_end);
+  /* const double log_a_start = log(a_start); */
+  /* const double log_a_end = log(a_end); */
 
-  /* Time between a_begin and a_start */
-  const double t1 = interp_table(c->time_interp_table, log_a_start,
-                                 c->log_a_begin, c->log_a_end);
+  /* /\* Time between a_begin and a_start *\/ */
+  /* const double t1 = interp_table(c->time_interp_table, log_a_start, */
+  /*                                c->log_a_begin, c->log_a_end); */
 
-  /* Time between a_begin and a_end */
-  const double t2 = interp_table(c->time_interp_table, log_a_end,
-                                 c->log_a_begin, c->log_a_end);
+  /* /\* Time between a_begin and a_end *\/ */
+  /* const double t2 = interp_table(c->time_interp_table, log_a_end, */
+  /*                                c->log_a_begin, c->log_a_end); */
+
+  const double fac = (1. / c->H0) * (2. / (3. * sqrt(c->Omega_lambda)));
+  const double ratio = c->Omega_lambda / c->Omega_m;
+
+  const double t1 = fac * asinh(sqrt(a1 * a1 * a1 * ratio));
+  const double t2 = fac * asinh(sqrt(a2 * a2 * a2 * ratio));
 
   return t2 - t1;
 }
