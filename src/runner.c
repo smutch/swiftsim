@@ -2020,7 +2020,7 @@ void runner_do_extra_ghost(struct runner *r, struct cell *c, int timer) {
  * @param timer Are we timing this ?
  */
 void runner_do_ghost(struct runner *r, struct cell *c, int timer) {
-#if defined(EULER_ENG_SPH) || defined(NAV_STOK_SPH)
+#if defined(WITH_ENGINEERING)
 
           /* Recurse? */
   if (c->split) {
@@ -2606,7 +2606,6 @@ void runner_do_unskip_mapper(void *map_data, int num_elements,
   const int nodeID = e->nodeID;
   struct space *s = e->s;
   int *local_cells = (int *)map_data;
-
   for (int ind = 0; ind < num_elements; ind++) {
     struct cell *c = &s->cells_top[local_cells[ind]];
     if (c != NULL) {
@@ -3817,6 +3816,10 @@ void runner_do_end_grav_force(struct runner *r, struct cell *c, int timer) {
  */
 void runner_do_gas_swallow(struct runner *r, struct cell *c, int timer) {
 
+#if defined(WITH_ENGINEERING)
+
+#else
+
   struct engine *e = r->e;
   struct space *s = e->s;
   struct bpart *bparts = s->bparts;
@@ -3976,6 +3979,7 @@ void runner_do_gas_swallow(struct runner *r, struct cell *c, int timer) {
       } /* Part was flagged for swallowing */
     }   /* Loop over the parts */
   }     /* Cell is not split */
+#endif
 }
 
 /**
@@ -4038,6 +4042,10 @@ void runner_do_gas_swallow_pair(struct runner *r, struct cell *ci,
  * @param timer Are we timing this?
  */
 void runner_do_bh_swallow(struct runner *r, struct cell *c, int timer) {
+
+#if defined(WITH_ENGINEERING)
+
+#else
 
   struct engine *e = r->e;
   struct space *s = e->s;
@@ -4180,6 +4188,7 @@ void runner_do_bh_swallow(struct runner *r, struct cell *c, int timer) {
       } /* Part was flagged for swallowing */
     }   /* Loop over the parts */
   }     /* Cell is not split */
+#endif
 }
 
 /**

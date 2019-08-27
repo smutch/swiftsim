@@ -868,9 +868,9 @@ int main(int argc, char *argv[]) {
 #if defined(WITH_MPI)
 #if defined(HAVE_PARALLEL_HDF5)
     read_ic_parallel(ICfileName, &us, dim, &parts, &gparts, &sparts, &bparts,
-                     &Ngas, &Ngpart, &Nspart, &Nbpart, &flag_entropy_ICs,
+                     &Ngas, &Ngpart, &Nspart, &Nbpart, &Nfluid, &Nfluid, &flag_entropy_ICs,
                      with_hydro, (with_external_gravity || with_self_gravity),
-                     with_stars, with_black_holes, cleanup_h, cleanup_sqrt_a,
+                     with_stars, with_black_holes, 0,cleanup_h, cleanup_sqrt_a,
                      cosmo.h, cosmo.a, myrank, nr_nodes, MPI_COMM_WORLD,
                      MPI_INFO_NULL, nr_threads, dry_run);
 #else
