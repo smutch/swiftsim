@@ -112,7 +112,6 @@ runner_iact_nonsym_bh_gas_density(
  * @param r2 Comoving square distance between the two particles.
  * @param dx Comoving vector separating both particles (pi - pj).
  * @param hi Comoving smoothing-length of particle i.
- * @param hj Comoving smoothing-length of particle j.
  * @param bi First particle (black hole).
  * @param gpj Second particle (#gpart of any kind)
  * @param cosmo The cosmological model.
@@ -120,9 +119,8 @@ runner_iact_nonsym_bh_gas_density(
  */
 __attribute__((always_inline)) INLINE static void
 runner_iact_nonsym_bh_gpart_repos(const float r2, const float *dx,
-                                  const float hi, const float hj,
-                                  struct bpart *restrict bi,
-                                  struct gpart *restrict gpj,
+                                  const float hi, struct bpart *restrict bi,
+                                  const struct gpart *restrict gpj,
                                   const struct cosmology *cosmo,
                                   const struct gravity_props *grav_props) {
 

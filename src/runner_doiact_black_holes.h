@@ -185,7 +185,7 @@ void DOSELF1_BH(struct runner *r, struct cell *c, int timer) {
                           (float)(bi->x[1] - c->loc[1]),
                           (float)(bi->x[2] - c->loc[2])};
 
-    /* Loop over the parts in cj. */
+    /* Loop over the bparts in cj. */
     for (int bjd = 0; bjd < bcount; bjd++) {
 
       /* Skip self interaction */
@@ -218,6 +218,61 @@ void DOSELF1_BH(struct runner *r, struct cell *c, int timer) {
                    ti_current);
       }
     } /* loop over the bparts in ci. */
+  }   /* loop over the bparts in ci. */
+
+#endif /* (FUNCTION_TASK_LOOP == TASK_LOOP_SWALLOW) */
+
+    /* And finally a loop to collect the minimum of potential */
+#if (FUNCTION_TASK_LOOP == TASK_LOOP_SWALLOW)
+
+  const int gcount = c->grav.count;
+  const struct gpart *gparts = c->grav.parts;
+
+  /* Loop over the bparts in ci. */
+  for (int bid = 0; bid < bcount; bid++) {
+
+    /* Get a hold of the ith bpart in ci. */
+    struct bpart *restrict bi = &bparts[bid];
+
+    /* Skip inactive particles */
+    if (!bpart_is_active(bi, e)) continue;
+
+    const float hi = bi->h;
+    const float hig2 = hi * hi * kernel_gamma2;
+    const float bix[3] = {(float)(bi->x[0] - c->loc[0]),
+                          (float)(bi->x[1] - c->loc[1]),
+                          (float)(bi->x[2] - c->loc[2])};
+
+    /* Loop over the gparts in cj. */
+    for (int gjd = 0; gjd < gcount; gjd++) {
+
+      /* Get a pointer to the jth particle. */
+      const struct gpart *restrict gpj = &gparts[gjd];
+
+      /* Early abort? */
+      if (gpart_is_inhibited(gpj, e)) continue;
+
+      /* Compute the pairwise distance. */
+      const float pjx[3] = {(float)(gpj->x[0] - c->loc[0]),
+                            (float)(gpj->x[1] - c->loc[1]),
+                            (float)(gpj->x[2] - c->loc[2])};
+      const float dx[3] = {bix[0] - pjx[0], bix[1] - pjx[1], bix[2] - pjx[2]};
+      const float r2 = dx[0] * dx[0] + dx[1] * dx[1] + dx[2] * dx[2];
+
+#ifdef SWIFT_DEBUG_CHECKS
+      /* Check that particles have been drifted to the current time */
+      if (bi->ti_drift != e->ti_current)
+        error("Particle bi not drifted to current time");
+      if (gpj->ti_drift != e->ti_current)
+        error("Particle bj not drifted to current time");
+#endif
+
+      if (r2 < hig2) {
+        runner_iact_nonsym_bh_gpart_repos(r2, dx, hi, bi, gpj, cosmo,
+                                          e->gravity_properties);
+      }
+
+    } /* loop over the gparts in ci. */
   }   /* loop over the bparts in ci. */
 
 #endif /* (FUNCTION_TASK_LOOP == TASK_LOOP_SWALLOW) */
@@ -371,6 +426,64 @@ void DO_NONSYM_PAIR1_BH_NAIVE(struct runner *r, struct cell *restrict ci,
       }
     } /* loop over the bparts in cj. */
   }   /* loop over the bparts in ci. */
+
+#endif /* (FUNCTION_TASK_LOOP == TASK_LOOP_SWALLOW) */
+
+    /* And finally a loop to collect the minimum of potential */
+#if (FUNCTION_TASK_LOOP == TASK_LOOP_SWALLOW)
+
+  if ((ci->nodeID == e->nodeID && cj->nodeID == e->nodeID) ||
+      (ci->nodeID == e->nodeID && cj->nodeID != e->nodeID)) {
+
+    const int gcount_j = cj->grav.count;
+    const struct gpart *gparts_j = cj->grav.parts;
+
+    /* Loop over the bparts in ci. */
+    for (int bid = 0; bid < bcount_i; bid++) {
+
+      /* Get a hold of the ith bpart in ci. */
+      struct bpart *restrict bi = &bparts_i[bid];
+
+      /* Skip inactive particles */
+      if (!bpart_is_active(bi, e)) continue;
+
+      const float hi = bi->h;
+      const float hig2 = hi * hi * kernel_gamma2;
+      const float bix[3] = {(float)(bi->x[0] - (cj->loc[0] + shift[0])),
+                            (float)(bi->x[1] - (cj->loc[1] + shift[1])),
+                            (float)(bi->x[2] - (cj->loc[2] + shift[2]))};
+
+      /* Loop over the bparts in cj. */
+      for (int gjd = 0; gjd < gcount_j; gjd++) {
+
+        /* Get a pointer to the jth particle. */
+        const struct gpart *gpj = &gparts_j[gjd];
+
+        /* Skip inhibited particles. */
+        if (gpart_is_inhibited(gpj, e)) continue;
+
+        /* Compute the pairwise distance. */
+        const float bjx[3] = {(float)(gpj->x[0] - cj->loc[0]),
+                              (float)(gpj->x[1] - cj->loc[1]),
+                              (float)(gpj->x[2] - cj->loc[2])};
+        float dx[3] = {bix[0] - bjx[0], bix[1] - bjx[1], bix[2] - bjx[2]};
+        const float r2 = dx[0] * dx[0] + dx[1] * dx[1] + dx[2] * dx[2];
+
+#ifdef SWIFT_DEBUG_CHECKS
+        /* Check that particles have been drifted to the current time */
+        if (bi->ti_drift != e->ti_current)
+          error("Particle bi not drifted to current time");
+        if (gpj->ti_drift != e->ti_current)
+          error("Particle bj not drifted to current time");
+#endif
+
+        if (r2 < hig2) {
+          runner_iact_nonsym_bh_gpart_repos(r2, dx, hi, bi, gpj, cosmo,
+                                            e->gravity_properties);
+        }
+      } /* loop over the gparts in cj. */
+    }   /* loop over the bparts in ci. */
+  }     /* Are we running over the gpart in cj? */
 
 #endif /* (FUNCTION_TASK_LOOP == TASK_LOOP_SWALLOW) */
 }
