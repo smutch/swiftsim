@@ -104,6 +104,68 @@ runner_iact_nonsym_bh_gas_density(
 }
 
 /**
+ * @brief Repositioning interaction between two particles (non-symmetric).
+ *
+ * Function used to identify the #gpart with the lowest potential
+ * around the black hole particle.
+ *
+ * @param r2 Comoving square distance between the two particles.
+ * @param dx Comoving vector separating both particles (pi - pj).
+ * @param hi Comoving smoothing-length of particle i.
+ * @param hj Comoving smoothing-length of particle j.
+ * @param bi First particle (black hole).
+ * @param gpj Second particle (#gpart of any kind)
+ * @param cosmo The cosmological model.
+ * @param grav_props The properties of the gravity scheme (softening, G, ...).
+ */
+__attribute__((always_inline)) INLINE static void
+runner_iact_nonsym_bh_gpart_repos(const float r2, const float *dx,
+                                  const float hi, const float hj,
+                                  struct bpart *restrict bi,
+                                  struct gpart *restrict gpj,
+                                  const struct cosmology *cosmo,
+                                  const struct gravity_props *grav_props) {
+
+  /* Note the factor 9 is taken from EAGLE. Will be turned into a parameter */
+  const float max_dist_repos2 =
+      kernel_gravity_softening_plummer_equivalent_inv *
+      kernel_gravity_softening_plummer_equivalent_inv * 9.f *
+      grav_props->epsilon_baryon_cur * grav_props->epsilon_baryon_cur;
+
+  /* This gas neighbour is close enough that we can consider it's potential
+     for repositioning */
+  if (r2 < max_dist_repos2) {
+
+    /* Compute relative peculiar velocity between the two BHs
+     * Recall that in SWIFT v is (v_pec * a) */
+    const float delta_v[3] = {bi->v[0] - gpj->v_full[0],  /* x */
+                              bi->v[1] - gpj->v_full[1],  /* y */
+                              bi->v[2] - gpj->v_full[2]}; /* z */
+    const float v2 = delta_v[0] * delta_v[0] +            /* x */
+                     delta_v[1] * delta_v[1] +            /* y */
+                     delta_v[2] * delta_v[2];             /* z */
+
+    const float v2_pec = v2 * cosmo->a2_inv;
+
+    /* Check the velocity criterion */
+    if (v2_pec < 0.25f * bi->sound_speed_gas * bi->sound_speed_gas) {
+
+      const float potential = gravity_get_comoving_potential(gpj);
+
+      /* Is the potential lower? */
+      if (potential < bi->reposition.min_potential) {
+
+        /* Store this as our new best */
+        bi->reposition.min_potential = potential;
+        bi->reposition.x[0] = gpj->x[0]; /* x */
+        bi->reposition.x[1] = gpj->x[1]; /* y */
+        bi->reposition.x[2] = gpj->x[2]; /* z */
+      }
+    }
+  }
+}
+
+/**
  * @brief Swallowing interaction between two particles (non-symmetric).
  *
  * Function used to flag the gas particles that will be swallowed
@@ -138,44 +200,6 @@ runner_iact_nonsym_bh_gas_swallow(
   const float hi_inv_dim = pow_dimension(hi_inv);
   const float ui = r * hi_inv;
   kernel_eval(ui, &wi);
-
-  /* Start by checking the repositioning criteria */
-
-  /* Note the factor 9 is taken from EAGLE. Will be turned into a parameter */
-  const float max_dist_repos2 =
-      kernel_gravity_softening_plummer_equivalent_inv *
-      kernel_gravity_softening_plummer_equivalent_inv * 9.f *
-      grav_props->epsilon_baryon_cur * grav_props->epsilon_baryon_cur;
-
-  /* This gas neighbour is close enough that we can consider it's potential
-     for repositioning */
-  if (r2 < max_dist_repos2) {
-
-    /* Compute relative peculiar velocity between the two BHs
-     * Recall that in SWIFT v is (v_pec * a) */
-    const float delta_v[3] = {bi->v[0] - pj->v[0], bi->v[1] - pj->v[1],
-                              bi->v[2] - pj->v[2]};
-    const float v2 = delta_v[0] * delta_v[0] + delta_v[1] * delta_v[1] +
-                     delta_v[2] * delta_v[2];
-
-    const float v2_pec = v2 * cosmo->a2_inv;
-
-    /* Check the velocity criterion */
-    if (v2_pec < 0.25f * bi->sound_speed_gas * bi->sound_speed_gas) {
-
-      const float potential = gravity_get_comoving_potential(pj->gpart);
-
-      /* Is the potential lower? */
-      if (potential < bi->reposition.min_potential) {
-
-        /* Store this as our new best */
-        bi->reposition.min_potential = potential;
-        bi->reposition.x[0] = pj->x[0];
-        bi->reposition.x[1] = pj->x[1];
-        bi->reposition.x[2] = pj->x[2];
-      }
-    }
-  }
 
   /* Is the BH hungry? */
   if (bi->subgrid_mass > bi->mass) {
@@ -245,33 +269,6 @@ runner_iact_nonsym_bh_bh_swallow(const float r2, const float *dx,
                    delta_v[2] * delta_v[2];
 
   const float v2_pec = v2 * cosmo->a2_inv;
-
-  /* Note the factor 9 is taken from EAGLE. Will be turned into a parameter */
-  const float max_dist_repos2 =
-      kernel_gravity_softening_plummer_equivalent_inv *
-      kernel_gravity_softening_plummer_equivalent_inv * 9.f *
-      grav_props->epsilon_baryon_cur * grav_props->epsilon_baryon_cur;
-
-  /* This gas neighbour is close enough that we can consider it's potential
-     for repositioning */
-  if (r2 < max_dist_repos2) {
-
-    /* Check the velocity criterion */
-    if (v2_pec < 0.25f * bi->sound_speed_gas * bi->sound_speed_gas) {
-
-      const float potential = gravity_get_comoving_potential(bj->gpart);
-
-      /* Is the potential lower? */
-      if (potential < bi->reposition.min_potential) {
-
-        /* Store this as our new best */
-        bi->reposition.min_potential = potential;
-        bi->reposition.x[0] = bj->x[0];
-        bi->reposition.x[1] = bj->x[1];
-        bi->reposition.x[2] = bj->x[2];
-      }
-    }
-  }
 
   /* Find the most massive of the two BHs */
   float M = bi->subgrid_mass;
