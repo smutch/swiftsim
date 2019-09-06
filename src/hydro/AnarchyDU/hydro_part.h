@@ -93,7 +93,7 @@ struct part {
   float a_hydro[3];
 
   /*! Particle mass. */
-  float mass;
+  double mass;
 
   /*! Particle smoothing length. */
   float h;

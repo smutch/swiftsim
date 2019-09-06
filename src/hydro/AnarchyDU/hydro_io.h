@@ -52,7 +52,7 @@ INLINE static void hydro_read_particles(struct part* parts,
                                 UNIT_CONV_LENGTH, parts, x);
   list[1] = io_make_input_field("Velocities", FLOAT, 3, COMPULSORY,
                                 UNIT_CONV_SPEED, parts, v);
-  list[2] = io_make_input_field("Masses", FLOAT, 1, COMPULSORY, UNIT_CONV_MASS,
+  list[2] = io_make_input_field("Masses", DOUBLE, 1, COMPULSORY, UNIT_CONV_MASS,
                                 parts, mass);
   list[3] = io_make_input_field("SmoothingLength", FLOAT, 1, COMPULSORY,
                                 UNIT_CONV_LENGTH, parts, h);
@@ -173,8 +173,8 @@ INLINE static void hydro_write_particles(const struct part* parts,
       "Peculiar velocities of the stars. This is (a * dx/dt) where x is the "
       "co-moving positions of the particles");
 
-  list[2] = io_make_output_field("Masses", FLOAT, 1, UNIT_CONV_MASS, 0.f, parts,
-                                 mass, "Masses of the particles");
+  list[2] = io_make_output_field("Masses", DOUBLE, 1, UNIT_CONV_MASS, 0.f,
+                                 parts, mass, "Masses of the particles");
 
   list[3] = io_make_output_field(
       "SmoothingLengths", FLOAT, 1, UNIT_CONV_LENGTH, 1.f, parts, h,

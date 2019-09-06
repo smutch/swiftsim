@@ -255,7 +255,7 @@ __attribute__((always_inline)) INLINE static float hydro_get_physical_density(
  *
  * @param p The particle of interest
  */
-__attribute__((always_inline)) INLINE static float hydro_get_mass(
+__attribute__((always_inline)) INLINE static double hydro_get_mass(
     const struct part *restrict p) {
 
   return p->mass;
@@ -268,7 +268,7 @@ __attribute__((always_inline)) INLINE static float hydro_get_mass(
  * @param m The mass to set.
  */
 __attribute__((always_inline)) INLINE static void hydro_set_mass(
-    struct part *restrict p, float m) {
+    struct part *restrict p, double m) {
 
   p->mass = m;
 }
