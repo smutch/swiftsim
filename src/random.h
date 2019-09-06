@@ -29,6 +29,8 @@
 #include <string.h>
 #include <sys/types.h>
 
+#include "lock.h"
+
 /**
  * @brief The categories of random number generated.
  *
@@ -140,35 +142,20 @@ INLINE static double inl_erand48(uint16_t xsubi[3]) { return erand48(xsubi); }
 INLINE static double random_unit_interval(int64_t id,
                                           const integertime_t ti_current,
                                           const enum random_number_type type) {
-  /* Start by packing the state into a sequence of 16-bit seeds for rand_r. */
-  uint16_t buff[9];
-  id += type;
-  memcpy(&buff[0], &id, 8);
-  memcpy(&buff[4], &ti_current, 8);
+  static swift_lock_type rand_lock;
+  static int first_call = 1;
 
-  /* The inputs give 16 bytes of state, but we need a multiple of 6 for the
-     calls to erand48(), so we add an additional aribrary constant two-byte
-     value to get 18 bytes of state. */
-  buff[8] = 6178;
-
-  /* Shuffle the buffer values, this will be our source of entropy for
-     the erand48 generator. */
-  uint32_t seed16 = 0;
-  for (int k = 0; k < 9; k++) {
-    seed16 ^= buff[k];
-    inl_rand_r(&seed16);
-  }
-  for (int k = 0; k < 9; k++) buff[k] ^= inl_rand_r(&seed16) & 0xffff;
-
-  /* Do three steps of erand48() over the state generated previously. */
-  uint16_t seed48[3] = {0, 0, 0};
-  for (int k = 0; k < 3; k++) {
-    for (int j = 0; j < 3; j++) seed48[j] ^= buff[3 * k + j];
-    inl_erand48(seed48);
+  if (first_call) {
+    lock_init(&rand_lock);
+    srand(42);
+    first_call = 0;
   }
 
-  /* Generate one final value, this is our output. */
-  return inl_erand48(seed48);
+  lock_lock(&rand_lock);
+  double val = rand() / ((double)RAND_MAX);
+  if (lock_unlock(&rand_lock) != 0) error("Failed to unlock rand");
+
+  return val;
 }
 
 #endif /* SWIFT_RANDOM_H */

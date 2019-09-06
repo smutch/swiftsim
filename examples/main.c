@@ -515,6 +515,8 @@ int main(int argc, char *argv[]) {
     message("sizeof(cell)        is %4zi bytes.", sizeof(struct cell));
   }
 
+  random_unit_interval(0, 0, 0);
+
   /* Read the parameter file */
   struct swift_params *params =
       (struct swift_params *)malloc(sizeof(struct swift_params));
