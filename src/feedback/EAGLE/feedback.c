@@ -714,7 +714,7 @@ void compute_stellar_evolution(const struct feedback_props* feedback_props,
   /* Get the individual abundances (mass fractions at birth time) */
   //const float* const abundances =
   //    chemistry_get_metal_mass_fraction_for_feedback(sp);
-  const float const_abundances[chemistry_element_count] = {0.f};
+  const float abundances[chemistry_element_count] = {0.f};
   
   /* Properties collected in the stellar density loop. */
   const float ngb_gas_mass = sp->feedback_data.to_collect.ngb_mass;
