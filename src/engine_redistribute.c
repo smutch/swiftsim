@@ -1029,4 +1029,3 @@ void engine_redistribute(struct engine *e) {
   error("SWIFT was not compiled with MPI support.");
 #endif
 }
-
