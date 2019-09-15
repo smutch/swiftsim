@@ -28,8 +28,8 @@
 /* Local headers. */
 #include "active.h"
 #include "black_holes.h"
-#include "engine.h"
 #include "cell.h"
+#include "engine.h"
 #include "timers.h"
 
 /**
