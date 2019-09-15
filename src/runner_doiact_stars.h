@@ -92,3 +92,15 @@ void DOPAIR1_BRANCH_STARS(struct runner *r, struct cell *ci, struct cell *cj);
 void DOSUB_SELF1_STARS(struct runner *r, struct cell *ci, int gettimer);
 void DOSUB_PAIR1_STARS(struct runner *r, struct cell *ci, struct cell *cj,
                        int gettimer);
+
+void DOSELF1_SUBSET_BRANCH_STARS(struct runner *r, struct cell *restrict ci,
+                                 struct spart *restrict sparts,
+                                 int *restrict ind, int scount);
+
+void DOPAIR1_SUBSET_BRANCH_STARS(struct runner *r, struct cell *restrict ci,
+                                 struct spart *restrict sparts_i,
+                                 int *restrict ind, int scount,
+                                 struct cell *restrict cj);
+
+void DOSUB_SUBSET_STARS(struct runner *r, struct cell *ci, struct spart *sparts,
+                        int *ind, int scount, struct cell *cj, int gettimer);

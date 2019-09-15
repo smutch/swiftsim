@@ -70,7 +70,7 @@ endif
 
 # Common source files
 AM_SOURCES = space.c runner.c runner_main.c runner_doiact_hydro.c runner_doiact_grav.c \
-    runner_doiact_stars.c runner_doiact_black_holes.c \
+    runner_doiact_stars.c runner_doiact_black_holes.c runner_ghost.c \
     queue.c task.c cell.c engine.c engine_maketasks.c \
     engine_marktasks.c engine_drift.c engine_unskip.c engine_collect_end_of_step.c \
     engine_redistribute.c engine_fof.c serial_io.c timers.c debug.c scheduler.c \

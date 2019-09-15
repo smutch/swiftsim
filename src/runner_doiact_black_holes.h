@@ -91,3 +91,14 @@ void DOPAIR1_BRANCH_BH(struct runner *r, struct cell *ci, struct cell *cj);
 void DOSUB_SELF1_BH(struct runner *r, struct cell *ci, int gettimer);
 void DOSUB_PAIR1_BH(struct runner *r, struct cell *ci, struct cell *cj,
                     int gettimer);
+
+void DOSELF1_SUBSET_BRANCH_BH(struct runner *r, struct cell *restrict ci,
+                              struct bpart *restrict bparts, int *restrict ind,
+                              const int bcount);
+void DOPAIR1_SUBSET_BRANCH_BH(struct runner *r, struct cell *restrict ci,
+                              struct bpart *restrict bparts_i,
+                              int *restrict ind, int const bcount,
+                              struct cell *restrict cj);
+
+void DOSUB_SUBSET_BH(struct runner *r, struct cell *ci, struct bpart *bparts,
+                     int *ind, const int bcount, struct cell *cj, int gettimer);

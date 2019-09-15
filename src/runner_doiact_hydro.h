@@ -138,3 +138,14 @@ void DOSUB_PAIR1(struct runner *r, struct cell *ci, struct cell *cj,
                  int gettimer);
 void DOSUB_PAIR2(struct runner *r, struct cell *ci, struct cell *cj,
                  int gettimer);
+
+void DOSELF_SUBSET_BRANCH(struct runner *r, struct cell *restrict ci,
+                          struct part *restrict parts, int *restrict ind,
+                          int count);
+
+void DOPAIR_SUBSET_BRANCH(struct runner *r, struct cell *restrict ci,
+                          struct part *restrict parts_i, int *restrict ind,
+                          int count, struct cell *restrict cj);
+
+void DOSUB_SUBSET(struct runner *r, struct cell *ci, struct part *parts,
+                  int *ind, int count, struct cell *cj, int gettimer);
