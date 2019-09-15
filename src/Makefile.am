@@ -71,7 +71,7 @@ endif
 # Common source files
 AM_SOURCES = space.c runner.c runner_main.c runner_doiact_hydro.c runner_doiact_grav.c \
     runner_doiact_stars.c runner_doiact_black_holes.c runner_ghost.c runner_recv.c \
-    queue.c task.c cell.c engine.c engine_maketasks.c \
+    runner_sort.c runner_drift.c queue.c task.c cell.c engine.c engine_maketasks.c \
     engine_marktasks.c engine_drift.c engine_unskip.c engine_collect_end_of_step.c \
     engine_redistribute.c engine_fof.c serial_io.c timers.c debug.c scheduler.c \
     proxy.c parallel_io.c units.c common_io.c single_io.c multipole.c version.c map.c \
