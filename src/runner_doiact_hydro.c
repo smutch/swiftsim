@@ -28,6 +28,7 @@
 #include "engine.h"
 #include "pressure_floor_iact.h"
 #include "runner.h"
+#include "runner_doiact_hydro_vec.h"
 #include "space_getsid.h"
 #include "timers.h"
 

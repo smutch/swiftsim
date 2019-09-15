@@ -44,7 +44,7 @@ include_HEADERS = space.h runner.h queue.h task.h lock.h cell.h part.h const.h \
     common_io.h single_io.h multipole.h map.h tools.h partition.h partition_fixed_costs.h \
     clocks.h parser.h physical_constants.h physical_constants_cgs.h potential.h version.h \
     hydro_properties.h riemann.h threadpool.h cooling_io.h cooling.h cooling_struct.h \
-    statistics.h memswap.h cache.h runner_doiact_vec.h profiler.h entropy_floor.h \
+    statistics.h memswap.h cache.h runner_doiact_hydro_vec.h profiler.h entropy_floor.h \
     dump.h logger.h active.h timeline.h xmf.h gravity_properties.h gravity_derivatives.h \
     gravity_softened_derivatives.h vector_power.h collectgroup.h hydro_space.h sort_part.h \
     chemistry.h chemistry_io.h chemistry_struct.h cosmology.h restart.h space_getsid.h utilities.h \
@@ -72,6 +72,7 @@ endif
 AM_SOURCES = space.c runner.c runner_main.c runner_doiact_hydro.c runner_doiact_grav.c \
     runner_doiact_stars.c runner_doiact_black_holes.c runner_ghost.c runner_recv.c \
     runner_sort.c runner_drift.c runner_black_holes.c runner_time_integration.c \
+    runner_doiact_hydro_vec.c \
     queue.c task.c cell.c engine.c engine_maketasks.c \
     engine_marktasks.c engine_drift.c engine_unskip.c engine_collect_end_of_step.c \
     engine_redistribute.c engine_fof.c serial_io.c timers.c debug.c scheduler.c \
@@ -79,7 +80,7 @@ AM_SOURCES = space.c runner.c runner_main.c runner_doiact_hydro.c runner_doiact_
     kernel_hydro.c tools.c part.c partition.c clocks.c parser.c \
     physical_constants.c potential.c hydro_properties.c \
     threadpool.c cooling.c star_formation.c \
-    statistics.c runner_doiact_vec.c profiler.c dump.c logger.c \
+    statistics.c profiler.c dump.c logger.c \
     part_type.c xmf.c gravity_properties.c gravity.c \
     collectgroup.c hydro_space.c equation_of_state.c \
     chemistry.c cosmology.c restart.c mesh_gravity.c velociraptor_interface.c \
@@ -89,7 +90,7 @@ AM_SOURCES = space.c runner.c runner_main.c runner_doiact_hydro.c runner_doiact_
 
 # Include files for distribution, not installation.
 nobase_noinst_HEADERS = align.h approx_math.h atomic.h barrier.h cycle.h error.h inline.h kernel_hydro.h kernel_gravity.h \
-		 gravity_iact.h kernel_long_gravity.h vector.h cache.h runner_doiact_vec.h  \
+		 gravity_iact.h kernel_long_gravity.h vector.h cache.h \
                  runner_doiact_nosort.h runner_doiact_stars.h runner_doiact_black_holes.h units.h intrinsics.h minmax.h \
                  kick.h timestep.h drift.h adiabatic_index.h io_properties.h dimension.h part_type.h periodic.h memswap.h \
                  dump.h logger.h sign.h logger_io.h timestep_limiter.h hashmap.h \
