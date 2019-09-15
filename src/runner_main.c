@@ -35,6 +35,74 @@
 #include "scheduler.h"
 #include "timers.h"
 
+/* Import the density loop functions. */
+#define FUNCTION density
+#define FUNCTION_TASK_LOOP TASK_LOOP_DENSITY
+#include "runner_doiact_hydro.h"
+#undef FUNCTION
+#undef FUNCTION_TASK_LOOP
+
+/* Import the gradient loop functions (if required). */
+#ifdef EXTRA_HYDRO_LOOP
+#define FUNCTION gradient
+#define FUNCTION_TASK_LOOP TASK_LOOP_GRADIENT
+#include "runner_doiact_hydro.h"
+#undef FUNCTION
+#undef FUNCTION_TASK_LOOP
+#endif
+
+/* Import the force loop functions. */
+#define FUNCTION force
+#define FUNCTION_TASK_LOOP TASK_LOOP_FORCE
+#include "runner_doiact_hydro.h"
+#undef FUNCTION
+#undef FUNCTION_TASK_LOOP
+
+/* Import the limiter loop functions. */
+#define FUNCTION limiter
+#define FUNCTION_TASK_LOOP TASK_LOOP_LIMITER
+#include "runner_doiact_hydro.h"
+#undef FUNCTION
+#undef FUNCTION_TASK_LOOP
+
+/* Import the gravity loop functions. */
+#include "runner_doiact_grav.c"
+
+/* Import the stars density loop functions. */
+#define FUNCTION density
+#define FUNCTION_TASK_LOOP TASK_LOOP_DENSITY
+#include "runner_doiact_stars.h"
+#undef FUNCTION_TASK_LOOP
+#undef FUNCTION
+
+/* Import the stars feedback loop functions. */
+#define FUNCTION feedback
+#define FUNCTION_TASK_LOOP TASK_LOOP_FEEDBACK
+#include "runner_doiact_stars.h"
+#undef FUNCTION_TASK_LOOP
+#undef FUNCTION
+
+/* Import the black hole density loop functions. */
+#define FUNCTION density
+#define FUNCTION_TASK_LOOP TASK_LOOP_DENSITY
+#include "runner_doiact_black_holes.h"
+#undef FUNCTION_TASK_LOOP
+#undef FUNCTION
+
+/* Import the black hole feedback loop functions. */
+#define FUNCTION swallow
+#define FUNCTION_TASK_LOOP TASK_LOOP_SWALLOW
+#include "runner_doiact_black_holes.h"
+#undef FUNCTION_TASK_LOOP
+#undef FUNCTION
+
+/* Import the black hole feedback loop functions. */
+#define FUNCTION feedback
+#define FUNCTION_TASK_LOOP TASK_LOOP_FEEDBACK
+#include "runner_doiact_black_holes.h"
+#undef FUNCTION_TASK_LOOP
+#undef FUNCTION
+
 /**
  * @brief The #runner main thread routine.
  *
