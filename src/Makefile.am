@@ -54,7 +54,8 @@ include_HEADERS = space.h runner.h queue.h task.h lock.h cell.h part.h const.h \
     star_formation_logger.h star_formation_logger_struct.h \
     pressure_floor.h pressure_floor_struct.h pressure_floor_iact.h \
     velociraptor_struct.h velociraptor_io.h random.h memuse.h black_holes.h black_holes_io.h \
-    black_holes_properties.h black_holes_struct.h feedback.h feedback_struct.h feedback_properties.h
+    black_holes_properties.h black_holes_struct.h feedback.h feedback_struct.h feedback_properties.h \
+		darkmatter_write_grids.h
 
 # source files for EAGLE cooling
 EAGLE_COOLING_SOURCES =
@@ -81,7 +82,8 @@ AM_SOURCES = space.c runner.c queue.c task.c cell.c engine.c engine_maketasks.c 
     chemistry.c cosmology.c restart.c mesh_gravity.c velociraptor_interface.c \
     outputlist.c velociraptor_dummy.c logger_io.c memuse.c fof.c \
     hashmap.c pressure_floor.c \
-    $(EAGLE_COOLING_SOURCES) $(EAGLE_FEEDBACK_SOURCES)
+    $(EAGLE_COOLING_SOURCES) $(EAGLE_FEEDBACK_SOURCES) \
+		darkmatter_write_grids.c
 
 # Include files for distribution, not installation.
 nobase_noinst_HEADERS = align.h approx_math.h atomic.h barrier.h cycle.h error.h inline.h kernel_hydro.h kernel_gravity.h \
