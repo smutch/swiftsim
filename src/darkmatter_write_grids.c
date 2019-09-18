@@ -6,6 +6,7 @@
 
 /* Local includes. */
 #include "error.h"
+#include <mpi.h>
 
 
 // TODO(smutch): Make this available from `mesh_gravity.c`
@@ -29,10 +30,11 @@ __attribute__((always_inline)) INLINE static int row_major_id_periodic(int i,
 
 
 // TODO(smutch): Make this use threads (see `mesh_gravity.c` for an example)
+// TODO(smutch): Remove asserts
 void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_file) {
 
   struct gpart* gparts = e->s->gparts;
-  const int grid_dim = 128;  // TODO(smutch): Make this a variable
+  const int grid_dim = 16;  // TODO(smutch): Make this a variable
   const int n_grid_cells = grid_dim * grid_dim * grid_dim;
   const double *box_size = e->s->dim;
 
@@ -41,8 +43,13 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
     cell_size[ii] = box_size[ii] / (double)grid_dim;
   }
 
-  //TODO(smutch): Error checking
+  // TODO(smutch): Error checking
+  // TODO(smutch): This should be a swift_free
   double* grid = calloc(n_grid_cells, sizeof(double));
+
+  for(int ii=0; ii < n_grid_cells; ++ii) {
+    assert(grid[ii] == 0.0);
+  }
 
   /* Loop through all particles and assign to the grid. */
   for(size_t ii=0; ii < Npart; ++ii) {
@@ -54,25 +61,32 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
     }
 
     int index = row_major_id_periodic(coord[0], coord[1], coord[2], grid_dim);
+    assert((0 <= index) && (index < n_grid_cells));
 
-    grid[index] += gp->mass;
+    grid[index] += 1.0; //gp->mass;
   }
 
   /* reduce the grid */
   MPI_Allreduce(MPI_IN_PLACE, grid, n_grid_cells, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   /* write the result */
-  hid_t h_grp = H5Gopen(h_file, "/MassTest", H5P_DEFAULT);
+  // TODO(smutch): units!  Check how this is done when writing particles
+  hid_t h_grp = H5Gcreate(h_file, "/MassTest", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   if (h_grp < 0)
-    error("Error while opening MassTest group.");
+    error("Error while creating MassTest group.");
 
   int i_rank, n_ranks;
   MPI_Comm_rank(MPI_COMM_WORLD, &i_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &n_ranks);
 
   // split the write into slabs on the x axis
+  {
+      // TODO(smutch): Deal with case when this isn't true.
+      int tmp = grid_dim % n_ranks;
+      assert(tmp == 0);
+  }
   int local_slab_size = grid_dim / n_ranks;
-  int local_offset = i_rank > 0 ? local_slab_size * (n_ranks - 1) : 0;
+  int local_offset = local_slab_size * i_rank;
   if (i_rank == n_ranks - 1) {
     local_slab_size = grid_dim - local_slab_size;
   }
@@ -81,16 +95,12 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
   hsize_t dims[3] = { grid_dim, grid_dim, grid_dim };
   hid_t fspace_id = H5Screate_simple(3, dims, NULL);
 
-  // create the memspace
-  hsize_t mem_dims[3] = { local_slab_size, grid_dim, grid_dim };
-  hid_t memspace_id = H5Screate_simple(3, mem_dims, NULL);
-
   // set the dataset creation property list to use chunking along x-axis
   hid_t dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
   H5Pset_chunk(dcpl_id, 3, (hsize_t[3]) { 1, grid_dim, grid_dim });
 
   // create the dataset
-  hid_t dset_id = H5Dcreate(h_file, "data", H5T_NATIVE_FLOAT, fspace_id,
+  hid_t dset_id = H5Dcreate(h_grp, "data", H5T_NATIVE_DOUBLE, fspace_id,
       H5P_DEFAULT, dcpl_id, H5P_DEFAULT);
 
   H5Pclose(dcpl_id);
@@ -103,9 +113,13 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
   hsize_t start[3] = { local_offset, 0, 0 };
   hsize_t count[3] = { local_slab_size, grid_dim, grid_dim };
   H5Sselect_hyperslab(fspace_id, H5S_SELECT_SET, start, NULL, count, NULL);
+  
+  // create the memspace
+  hsize_t mem_dims[3] = { local_slab_size, grid_dim, grid_dim };
+  hid_t memspace_id = H5Screate_simple(3, mem_dims, NULL);
 
   // write the dataset
-  H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memspace_id, fspace_id, plist_id, grid);
+  H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memspace_id, fspace_id, plist_id, &grid[row_major_id_periodic(local_offset, 0, 0, grid_dim)]);
 
   H5Pclose(plist_id);
   H5Dclose(dset_id);
@@ -114,5 +128,6 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
   H5Gclose(h_grp);
 
   /* free the grid */
-  if (grid) swift_free("grid", grid);
+  // TODO(smutch): This should be a swift_free
+  if (grid) free(grid);
 }
