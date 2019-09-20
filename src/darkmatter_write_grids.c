@@ -47,10 +47,6 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
   // TODO(smutch): This should be a swift_free
   double* grid = calloc(n_grid_cells, sizeof(double));
 
-  for(int ii=0; ii < n_grid_cells; ++ii) {
-    assert(grid[ii] == 0.0);
-  }
-
   /* Loop through all particles and assign to the grid. */
   for(size_t ii=0; ii < Npart; ++ii) {
     const struct gpart* gp = &gparts[ii];
@@ -63,17 +59,24 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
     int index = row_major_id_periodic(coord[0], coord[1], coord[2], grid_dim);
     assert((0 <= index) && (index < n_grid_cells));
 
-    grid[index] += 1.0; //gp->mass;
+    // Assumption here is that all particles have the same mass.
+    grid[index] += 1.0;
   }
 
   /* reduce the grid */
   MPI_Allreduce(MPI_IN_PLACE, grid, n_grid_cells, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
+  /* convert to density */
+  double n_to_density = gparts[0].mass / (cell_size[0] * cell_size[1] * cell_size[2]);
+  for(int ii=0; ii < n_grid_cells; ++ii) {
+    grid[ii] *= n_to_density;
+  }
+
   /* write the result */
   // TODO(smutch): units!  Check how this is done when writing particles
-  hid_t h_grp = H5Gcreate(h_file, "/MassTest", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  hid_t h_grp = H5Gcreate(h_file, "/PartType1/Grids", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   if (h_grp < 0)
-    error("Error while creating MassTest group.");
+    error("Error while creating dark matter grids group.");
 
   int i_rank, n_ranks;
   MPI_Comm_rank(MPI_COMM_WORLD, &i_rank);
@@ -100,7 +103,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
   H5Pset_chunk(dcpl_id, 3, (hsize_t[3]) { 1, grid_dim, grid_dim });
 
   // create the dataset
-  hid_t dset_id = H5Dcreate(h_grp, "data", H5T_NATIVE_DOUBLE, fspace_id,
+  hid_t dset_id = H5Dcreate(h_grp, "Density", H5T_NATIVE_DOUBLE, fspace_id,
       H5P_DEFAULT, dcpl_id, H5P_DEFAULT);
 
   H5Pclose(dcpl_id);
