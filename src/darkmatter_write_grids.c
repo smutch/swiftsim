@@ -30,7 +30,7 @@ __attribute__((always_inline)) INLINE static int row_major_id_periodic(int i,
 }
 
 
-__attribute__((always_inline)) INLINE static int part_to_grid_index(const struct gpart* gp, const double cell_size[3], const double grid_dim, const int n_grid_cells) {
+__attribute__((always_inline)) INLINE static int part_to_grid_index(const struct gpart* gp, const double cell_size[3], const double grid_dim, const int n_grid_points) {
   int coord[3] = {-1, -1, -1};
 
   for(int jj=0; jj < 3; ++jj) {
@@ -38,7 +38,7 @@ __attribute__((always_inline)) INLINE static int part_to_grid_index(const struct
   }
 
   int index = row_major_id_periodic(coord[0], coord[1], coord[2], grid_dim);
-  assert((0 <= index) && (index < n_grid_cells));
+  assert((0 <= index) && (index < n_grid_points));
 
   return index;
 }
@@ -49,7 +49,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
 
   struct gpart* gparts = e->s->gparts;
   const int grid_dim = 16;  // TODO(smutch): Make this a variable
-  const int n_grid_cells = grid_dim * grid_dim * grid_dim;
+  const int n_grid_points = grid_dim * grid_dim * grid_dim;
   const double *box_size = e->s->dim;
   char dataset_name[DS_NAME_SIZE] = "";
 
@@ -61,8 +61,8 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
   // TODO(smutch): units!  Check how this is done when writing particles
   // TODO(smutch): Error checking
   // TODO(smutch): This should be a swift_free
-  double* grid = calloc(n_grid_cells, sizeof(double));
-  int* cell_counts = calloc(n_grid_cells, sizeof(int));
+  double* grid = calloc(n_grid_points, sizeof(double));
+  int* point_counts = calloc(n_grid_points, sizeof(int));
   
   // Calculate information for the write that is not dependent on the property being written
 
@@ -122,16 +122,16 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
       case DENSITY:
         for(size_t ii=0; ii < Npart; ++ii) {
           const struct gpart* gp = &gparts[ii];
-          int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_cells);
+          int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_points);
           // Assumption here is that all particles have the same mass.
-          cell_counts[index]++;  // note that this can be reused as required for other gridded properties
+          point_counts[index]++;  // note that this can be reused as required for other gridded properties
         }
         break;
 
       case VELOCITY_X:
         for(size_t ii=0; ii < Npart; ++ii) {
           const struct gpart* gp = &gparts[ii];
-          int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_cells);
+          int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_points);
           grid[index] += gp->v_full[0];
         }
         break;
@@ -139,7 +139,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
       case VELOCITY_Y:
         for(size_t ii=0; ii < Npart; ++ii) {
           const struct gpart* gp = &gparts[ii];
-          int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_cells);
+          int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_points);
           grid[index] += gp->v_full[1];
         }
         break;
@@ -147,15 +147,15 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
       case VELOCITY_Z:
         for(size_t ii=0; ii < Npart; ++ii) {
           const struct gpart* gp = &gparts[ii];
-          int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_cells);
+          int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_points);
           grid[index] += gp->v_full[2];
         }
         break;
     }
 
     /* reduce the grids */
-    MPI_Allreduce(MPI_IN_PLACE, grid, n_grid_cells, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, cell_counts, n_grid_cells, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, grid, n_grid_points, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, point_counts, n_grid_points, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
     /* Do any necessary conversions */
     switch (grid_type) {
@@ -163,8 +163,8 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
       case DENSITY:
         /* convert n_particles to density */
         n_to_density = gparts[0].mass / (cell_size[0] * cell_size[1] * cell_size[2]);
-        for(int ii=0; ii < n_grid_cells; ++ii) {
-          grid[ii] = n_to_density * (double)cell_counts[ii];
+        for(int ii=0; ii < n_grid_points; ++ii) {
+          grid[ii] = n_to_density * (double)point_counts[ii];
         }
         break;
 
@@ -172,8 +172,8 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
       case VELOCITY_Y:
       case VELOCITY_Z:
         /* take the mean */
-        for(int ii=0; ii < n_grid_cells; ++ii) {
-          grid[ii] /= (double)cell_counts[ii];
+        for(int ii=0; ii < n_grid_points; ++ii) {
+          grid[ii] /= (double)point_counts[ii];
         }
         break;
     }
@@ -206,7 +206,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
 
     // reset the grid if needed
     if (grid_type != VELOCITY_Z) {
-      bzero(grid, n_grid_cells * sizeof(double));
+      bzero(grid, n_grid_points * sizeof(double));
     }
 
   } 
@@ -219,6 +219,6 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
 
   /* free the grid */
   // TODO(smutch): This should be a swift_free
-  if (cell_counts) free(cell_counts);
+  if (point_counts) free(point_counts);
   if (grid) free(grid);
 }
