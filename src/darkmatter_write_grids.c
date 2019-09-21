@@ -62,6 +62,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
   // TODO(smutch): Error checking
   // TODO(smutch): This should be a swift_free
   double* grid = calloc(n_grid_cells, sizeof(double));
+  int* cell_counts = calloc(n_grid_cells, sizeof(int));
   
   // Calculate information for the write that is not dependent on the property being written
 
@@ -115,7 +116,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
   };
 
   for(enum grid_types grid_type=DENSITY; grid_type < VELOCITY_Z; ++grid_type) {
-    // TODO(smutch): Hoping this will be faster than switch statement in loop (not sure if compiler would fix that anyway though)
+    // TODO(smutch): Hoping this will be faster than switch statement in the loop (possible the compiler would fix that anyway though)
     /* Loop through all particles and assign to the grid. */
     switch (grid_type) {
       case DENSITY:
@@ -123,7 +124,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
           const struct gpart* gp = &gparts[ii];
           int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_cells);
           // Assumption here is that all particles have the same mass.
-          grid[index] += 1.0;
+          cell_counts[index]++;  // note that this can be reused as required for other gridded properties
         }
         break;
 
@@ -152,18 +153,33 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
         break;
     }
 
-    /* reduce the grid */
+    /* reduce the grids */
     MPI_Allreduce(MPI_IN_PLACE, grid, n_grid_cells, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, cell_counts, n_grid_cells, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
+    /* Do any necessary conversions */
     switch (grid_type) {
       double n_to_density;
       case DENSITY:
-        /* convert to density */
+        /* convert n_particles to density */
         n_to_density = gparts[0].mass / (cell_size[0] * cell_size[1] * cell_size[2]);
         for(int ii=0; ii < n_grid_cells; ++ii) {
-          grid[ii] *= n_to_density;
+          grid[ii] = n_to_density * (double)cell_counts[ii];
         }
+        break;
 
+      case VELOCITY_X:
+      case VELOCITY_Y:
+      case VELOCITY_Z:
+        /* take the mean */
+        for(int ii=0; ii < n_grid_cells; ++ii) {
+          grid[ii] /= (double)cell_counts[ii];
+        }
+        break;
+    }
+
+    switch (grid_type) {
+      case DENSITY:
         snprintf(dataset_name, DS_NAME_SIZE, "Density");
         break;
 
@@ -187,6 +203,12 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
     // write and close the dataset
     H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memspace_id, fspace_id, plist_id, &grid[row_major_id_periodic(local_offset, 0, 0, grid_dim)]);
     H5Dclose(dset_id);
+
+    // reset the grid if needed
+    if (grid_type != VELOCITY_Z) {
+      bzero(grid, n_grid_cells * sizeof(double));
+    }
+
   } 
 
   H5Sclose(memspace_id);
@@ -197,5 +219,6 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
 
   /* free the grid */
   // TODO(smutch): This should be a swift_free
+  if (cell_counts) free(cell_counts);
   if (grid) free(grid);
 }
