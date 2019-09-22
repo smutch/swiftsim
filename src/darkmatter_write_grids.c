@@ -5,8 +5,9 @@
 #include "darkmatter_write_grids.h"
 
 /* Local includes. */
-#include "error.h"
 #include <mpi.h>
+#include "error.h"
+#include "threadpool.h"
 
 #define DS_NAME_SIZE 8
 
@@ -42,6 +43,32 @@ __attribute__((always_inline)) INLINE static int part_to_grid_index(const struct
 
   return index;
 }
+
+struct gridding_extra_data {
+  struct gpart* gparts;
+  double cell_size[3];
+  int grid_dim;
+  int n_grid_points;
+};
+
+
+void increment_point_count_mapper(void* restrict temp_point_counts, int N, void* restrict temp_extra_data) {
+
+  int* point_counts = (int *)temp_point_counts;
+  const struct gridding_extra_data extra_data = *((const struct gridding_extra_data*)temp_extra_data);
+  const struct gpart* gparts = extra_data.gparts;
+  const double* cell_size = extra_data.cell_size;
+  const int grid_dim = extra_data.grid_dim;
+  const int n_grid_points = extra_data.n_grid_points;
+
+  for(int ii=0; ii < N; ++ii) {
+    const struct gpart* gp = &gparts[ii];
+    int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_points);
+    // Assumption here is that all particles have the same mass.
+    atomic_inc(&(point_counts[index]));  // note that this can be reused as required for other gridded properties
+  }
+}
+
 
 // TODO(smutch): Make this use threads (see `mesh_gravity.c` for an example)
 // TODO(smutch): Remove asserts?
@@ -121,6 +148,12 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
   hsize_t mem_dims[3] = { local_slab_size, grid_dim, grid_dim };
   hid_t memspace_id = H5Screate_simple(3, mem_dims, NULL);
 
+  struct gridding_extra_data extra_data;
+  extra_data.gparts = gparts;
+  memcpy(extra_data.cell_size, cell_size, sizeof(double)*3);
+  extra_data.grid_dim = grid_dim;
+  extra_data.n_grid_points = n_grid_points;
+
   enum grid_types {
     DENSITY,
     VELOCITY_X,
@@ -133,12 +166,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
     /* Loop through all particles and assign to the grid. */
     switch (grid_type) {
       case DENSITY:
-        for(size_t ii=0; ii < Npart; ++ii) {
-          const struct gpart* gp = &gparts[ii];
-          int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_points);
-          // Assumption here is that all particles have the same mass.
-          point_counts[index]++;  // note that this can be reused as required for other gridded properties
-        }
+        threadpool_map((struct threadpool*)&e->threadpool, increment_point_count_mapper, point_counts, Npart, grid_dim*grid_dim, 0, (void*)&extra_data);
         break;
 
       case VELOCITY_X:
