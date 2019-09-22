@@ -44,7 +44,7 @@ __attribute__((always_inline)) INLINE static int part_to_grid_index(const struct
 }
 
 // TODO(smutch): Make this use threads (see `mesh_gravity.c` for an example)
-// TODO(smutch): Remove asserts
+// TODO(smutch): Remove asserts?
 void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_file, 
     const struct unit_system* internal_units,
     const struct unit_system* snapshot_units) {
@@ -60,11 +60,22 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
     cell_size[ii] = box_size[ii] / (double)grid_dim;
   }
   
-  // TODO(smutch): units!  Check how this is done when writing particles
-  // TODO(smutch): Error checking
-  // TODO(smutch): This should be a swift_free
-  double* grid = calloc(n_grid_points, sizeof(double));
-  int* point_counts = calloc(n_grid_points, sizeof(int));
+  double* grid = NULL;
+  if (swift_memalign("writegrid", (void**)&grid, IO_BUFFER_ALIGNMENT,
+                     n_grid_points * sizeof(double)) != 0)
+      error("Failed to allocate output DM grids!");
+  for(int ii = 0; ii < n_grid_points; ++ii) {
+    grid[ii] = 0.0;
+  }
+
+  int* point_counts = NULL;
+  if (swift_memalign("countgrid", (void**)&point_counts, IO_BUFFER_ALIGNMENT,
+                     n_grid_points * sizeof(int)) != 0)
+      error("Failed to allocate point counts grids!");
+  for(int ii = 0; ii < n_grid_points; ++ii) {
+    point_counts[ii] = 0;
+  }
+
   
   // Calculate information for the write that is not dependent on the property being written
 
@@ -225,8 +236,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
   H5Sclose(fspace_id);
   H5Gclose(h_grp);
 
-  /* free the grid */
-  // TODO(smutch): This should be a swift_free
-  if (point_counts) free(point_counts);
-  if (grid) free(grid);
+  /* free the grids */
+  if (point_counts) swift_free("countgrid", point_counts);
+  if (grid) swift_free("writegrid", grid);
 }
