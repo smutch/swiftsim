@@ -45,7 +45,9 @@ __attribute__((always_inline)) INLINE static int part_to_grid_index(const struct
 
 // TODO(smutch): Make this use threads (see `mesh_gravity.c` for an example)
 // TODO(smutch): Remove asserts
-void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_file) {
+void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_file, 
+    const struct unit_system* internal_units,
+    const struct unit_system* snapshot_units) {
 
   struct gpart* gparts = e->s->gparts;
   const int grid_dim = 16;  // TODO(smutch): Make this a variable
@@ -115,7 +117,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
     VELOCITY_Z
   };
 
-  for(enum grid_types grid_type=DENSITY; grid_type < VELOCITY_Z; ++grid_type) {
+  for(enum grid_types grid_type=DENSITY; grid_type <= VELOCITY_Z; ++grid_type) {
     // TODO(smutch): Hoping this will be faster than switch statement in the loop (possible the compiler would fix that anyway though)
     /* Loop through all particles and assign to the grid. */
     switch (grid_type) {
@@ -157,12 +159,17 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
     MPI_Allreduce(MPI_IN_PLACE, grid, n_grid_points, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, point_counts, n_grid_points, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
+    // swift_declare_aligned_ptr(double, temp_d, (double*)temp,
+    //     IO_BUFFER_ALIGNMENT);
+
     /* Do any necessary conversions */
     switch (grid_type) {
       double n_to_density;
+      double unit_conv_factor;
       case DENSITY:
         /* convert n_particles to density */
-        n_to_density = gparts[0].mass / (cell_size[0] * cell_size[1] * cell_size[2]);
+        unit_conv_factor = units_conversion_factor(internal_units, snapshot_units, UNIT_CONV_DENSITY);
+        n_to_density = gparts[0].mass * unit_conv_factor / (cell_size[0] * cell_size[1] * cell_size[2]);
         for(int ii=0; ii < n_grid_points; ++ii) {
           grid[ii] = n_to_density * (double)point_counts[ii];
         }
@@ -172,8 +179,9 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
       case VELOCITY_Y:
       case VELOCITY_Z:
         /* take the mean */
+        unit_conv_factor = units_conversion_factor(internal_units, snapshot_units, UNIT_CONV_VELOCITY);
         for(int ii=0; ii < n_grid_points; ++ii) {
-          grid[ii] /= (double)point_counts[ii];
+          grid[ii] *= unit_conv_factor / (double)point_counts[ii];
         }
         break;
     }
