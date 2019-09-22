@@ -49,10 +49,11 @@ struct gridding_extra_data {
   double cell_size[3];
   int grid_dim;
   int n_grid_points;
+  int vel_component;
 };
 
 
-void increment_point_count_mapper(void* restrict temp_point_counts, int N, void* restrict temp_extra_data) {
+static void construct_point_count_mapper(void* restrict temp_point_counts, int N, void* restrict temp_extra_data) {
 
   int* point_counts = (int *)temp_point_counts;
   const struct gridding_extra_data extra_data = *((const struct gridding_extra_data*)temp_extra_data);
@@ -66,6 +67,24 @@ void increment_point_count_mapper(void* restrict temp_point_counts, int N, void*
     int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_points);
     // Assumption here is that all particles have the same mass.
     atomic_inc(&(point_counts[index]));  // note that this can be reused as required for other gridded properties
+  }
+}
+
+
+static void construct_velocity_grid_mapper(void* restrict temp_grid, int N, void* restrict temp_extra_data) {
+
+  double* grid = (double *)temp_grid;
+  const struct gridding_extra_data extra_data = *((const struct gridding_extra_data*)temp_extra_data);
+  const struct gpart* gparts = extra_data.gparts;
+  const double* cell_size = extra_data.cell_size;
+  const int grid_dim = extra_data.grid_dim;
+  const int n_grid_points = extra_data.n_grid_points;
+  const int component = extra_data.vel_component;
+
+  for(int ii=0; ii < N; ++ii) {
+    const struct gpart* gp = &gparts[ii];
+    int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_points);
+    atomic_add_d(&(grid[index]), gp->v_full[component]);
   }
 }
 
@@ -162,35 +181,25 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart, const hid_t h_
   };
 
   for(enum grid_types grid_type=DENSITY; grid_type <= VELOCITY_Z; ++grid_type) {
-    // TODO(smutch): Hoping this will be faster than switch statement in the loop (possible the compiler would fix that anyway though)
     /* Loop through all particles and assign to the grid. */
     switch (grid_type) {
       case DENSITY:
-        threadpool_map((struct threadpool*)&e->threadpool, increment_point_count_mapper, point_counts, Npart, grid_dim*grid_dim, 0, (void*)&extra_data);
+        threadpool_map((struct threadpool*)&e->threadpool, construct_point_count_mapper, point_counts, Npart, grid_dim*grid_dim, 0, (void*)&extra_data);
         break;
 
       case VELOCITY_X:
-        for(size_t ii=0; ii < Npart; ++ii) {
-          const struct gpart* gp = &gparts[ii];
-          int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_points);
-          grid[index] += gp->v_full[0];
-        }
+        extra_data.vel_component = 0;
+        threadpool_map((struct threadpool*)&e->threadpool, construct_velocity_grid_mapper, grid, Npart, grid_dim*grid_dim, 0, (void*)&extra_data);
         break;
 
       case VELOCITY_Y:
-        for(size_t ii=0; ii < Npart; ++ii) {
-          const struct gpart* gp = &gparts[ii];
-          int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_points);
-          grid[index] += gp->v_full[1];
-        }
+        extra_data.vel_component = 1;
+        threadpool_map((struct threadpool*)&e->threadpool, construct_velocity_grid_mapper, grid, Npart, grid_dim*grid_dim, 0, (void*)&extra_data);
         break;
 
       case VELOCITY_Z:
-        for(size_t ii=0; ii < Npart; ++ii) {
-          const struct gpart* gp = &gparts[ii];
-          int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_points);
-          grid[index] += gp->v_full[2];
-        }
+        extra_data.vel_component = 2;
+        threadpool_map((struct threadpool*)&e->threadpool, construct_velocity_grid_mapper, grid, Npart, grid_dim*grid_dim, 0, (void*)&extra_data);
         break;
     }
 
