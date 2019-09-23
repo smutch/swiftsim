@@ -47,27 +47,28 @@ __attribute__((always_inline)) INLINE static int part_to_grid_index(
 }
 
 struct gridding_extra_data {
-  struct gpart* gparts;
   double cell_size[3];
+  int* point_counts;
+  double* grid;
   int grid_dim;
   int n_grid_points;
   int vel_component;
 };
 
-static void construct_point_count_mapper(void* restrict temp_point_counts,
-                                         int N,
-                                         void* restrict temp_extra_data) {
+static void construct_point_count_mapper(void* restrict gparts_v, int N,
+                                         void* restrict extra_data_v) {
 
-  int* point_counts = (int*)temp_point_counts;
   const struct gridding_extra_data extra_data =
-      *((const struct gridding_extra_data*)temp_extra_data);
-  const struct gpart* gparts = extra_data.gparts;
+      *((const struct gridding_extra_data*)extra_data_v);
+  const struct gpart* gparts = (struct gpart*)gparts_v;
+
   const double* cell_size = extra_data.cell_size;
+  int* point_counts = extra_data.point_counts;
   const int grid_dim = extra_data.grid_dim;
   const int n_grid_points = extra_data.n_grid_points;
 
   for (int ii = 0; ii < N; ++ii) {
-    const struct gpart* gp = &gparts[ii];
+    const struct gpart* gp = &(gparts[ii]);
     int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_points);
     // Assumption here is that all particles have the same mass.
     atomic_inc(
@@ -76,20 +77,21 @@ static void construct_point_count_mapper(void* restrict temp_point_counts,
   }
 }
 
-static void construct_velocity_grid_mapper(void* restrict temp_grid, int N,
-                                           void* restrict temp_extra_data) {
+static void construct_velocity_grid_mapper(void* restrict gparts_v, int N,
+                                           void* restrict extra_data_v) {
 
-  double* grid = (double*)temp_grid;
   const struct gridding_extra_data extra_data =
-      *((const struct gridding_extra_data*)temp_extra_data);
-  const struct gpart* gparts = extra_data.gparts;
+      *((const struct gridding_extra_data*)extra_data_v);
+  const struct gpart* gparts = (struct gpart*)gparts_v;
+
   const double* cell_size = extra_data.cell_size;
+  double* grid = extra_data.grid;
   const int grid_dim = extra_data.grid_dim;
   const int n_grid_points = extra_data.n_grid_points;
   const int component = extra_data.vel_component;
 
   for (int ii = 0; ii < N; ++ii) {
-    const struct gpart* gp = &gparts[ii];
+    const struct gpart* gp = &(gparts[ii]);
     int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_points);
     atomic_add_d(&(grid[index]), gp->v_full[component]);
   }
@@ -112,6 +114,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
     cell_size[ii] = box_size[ii] / (double)grid_dim;
   }
 
+  /* array to be used for all grids */
   double* grid = NULL;
   if (swift_memalign("writegrid", (void**)&grid, IO_BUFFER_ALIGNMENT,
                      n_grid_points * sizeof(double)) != 0)
@@ -120,18 +123,19 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
     grid[ii] = 0.0;
   }
 
+  /* Array to be used to store integer particle counts at all grid points.
+   * Note that if we move away from nearest grid point, this will need to be
+   * changed to a double array. */
   int* point_counts = NULL;
   if (swift_memalign("countgrid", (void**)&point_counts, IO_BUFFER_ALIGNMENT,
-                     n_grid_points * sizeof(int)) != 0)
+                     n_grid_points * sizeof(int)) != 0) {
     error("Failed to allocate point counts grids!");
-  for (int ii = 0; ii < n_grid_points; ++ii) {
-    point_counts[ii] = 0;
   }
+  bzero(point_counts, n_grid_points * sizeof(int));
 
-  // Calculate information for the write that is not dependent on the property
-  // being written
+  /* Calculate information for the write that is not dependent on the property
+     being written. */
 
-  // create the group to store the results
   hid_t h_grp = H5Gcreate(h_file, "/PartType1/Grids", H5P_DEFAULT, H5P_DEFAULT,
                           H5P_DEFAULT);
   if (h_grp < 0) error("Error while creating dark matter grids group.");
@@ -140,7 +144,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
   MPI_Comm_rank(MPI_COMM_WORLD, &i_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &n_ranks);
 
-  // split the write into slabs on the x axis
+  /* split the write into slabs on the x axis */
   {
     // TODO(smutch): Deal with case when this isn't true.
     int tmp = grid_dim % n_ranks;
@@ -152,29 +156,28 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
     local_slab_size = grid_dim - local_slab_size;
   }
 
-  // create the filespace
+  /* create hdf5 properties, selections, etc. that will be used for all grid
+   * writes */
   hsize_t dims[3] = {grid_dim, grid_dim, grid_dim};
   hid_t fspace_id = H5Screate_simple(3, dims, NULL);
 
-  // set the dataset creation property list to use chunking along x-axis
   hid_t dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
   H5Pset_chunk(dcpl_id, 3, (hsize_t[3]){1, grid_dim, grid_dim});
 
-  // create the property list
   hid_t plist_id = H5Pcreate(H5P_DATASET_XFER);
   H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_INDEPENDENT);
 
-  // select a hyperslab in the filespace
   hsize_t start[3] = {local_offset, 0, 0};
   hsize_t count[3] = {local_slab_size, grid_dim, grid_dim};
   H5Sselect_hyperslab(fspace_id, H5S_SELECT_SET, start, NULL, count, NULL);
 
-  // create the memspace
   hsize_t mem_dims[3] = {local_slab_size, grid_dim, grid_dim};
   hid_t memspace_id = H5Screate_simple(3, mem_dims, NULL);
 
+  /* extra data for threadpool_map calls */
   struct gridding_extra_data extra_data;
-  extra_data.gparts = gparts;
+  extra_data.point_counts = point_counts;
+  extra_data.grid = grid;
   memcpy(extra_data.cell_size, cell_size, sizeof(double) * 3);
   extra_data.grid_dim = grid_dim;
   extra_data.n_grid_points = n_grid_points;
@@ -187,29 +190,29 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
     switch (grid_type) {
       case DENSITY:
         threadpool_map((struct threadpool*)&e->threadpool,
-                       construct_point_count_mapper, point_counts, Npart,
-                       grid_dim * grid_dim, 0, (void*)&extra_data);
+                       construct_point_count_mapper, gparts, Npart,
+                       sizeof(struct gpart), 0, (void*)&extra_data);
         break;
 
       case VELOCITY_X:
         extra_data.vel_component = 0;
         threadpool_map((struct threadpool*)&e->threadpool,
-                       construct_velocity_grid_mapper, grid, Npart,
-                       grid_dim * grid_dim, 0, (void*)&extra_data);
+                       construct_velocity_grid_mapper, gparts, Npart,
+                       sizeof(struct gpart), 0, (void*)&extra_data);
         break;
 
       case VELOCITY_Y:
         extra_data.vel_component = 1;
         threadpool_map((struct threadpool*)&e->threadpool,
-                       construct_velocity_grid_mapper, grid, Npart,
-                       grid_dim * grid_dim, 0, (void*)&extra_data);
+                       construct_velocity_grid_mapper, gparts, Npart,
+                       sizeof(struct gpart), 0, (void*)&extra_data);
         break;
 
       case VELOCITY_Z:
         extra_data.vel_component = 2;
         threadpool_map((struct threadpool*)&e->threadpool,
-                       construct_velocity_grid_mapper, grid, Npart,
-                       grid_dim * grid_dim, 0, (void*)&extra_data);
+                       construct_velocity_grid_mapper, gparts, Npart,
+                       sizeof(struct gpart), 0, (void*)&extra_data);
         break;
     }
 
@@ -218,9 +221,6 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
                   MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, point_counts, n_grid_points, MPI_INT, MPI_SUM,
                   MPI_COMM_WORLD);
-
-    // swift_declare_aligned_ptr(double, temp_d, (double*)temp,
-    //     IO_BUFFER_ALIGNMENT);
 
     /* Do any necessary conversions */
     switch (grid_type) {
@@ -267,16 +267,15 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
         break;
     }
 
-    // create the dataset
+    /* actually do the write finally! */
     hid_t dset_id = H5Dcreate(h_grp, dataset_name, H5T_NATIVE_DOUBLE, fspace_id,
                               H5P_DEFAULT, dcpl_id, H5P_DEFAULT);
 
-    // write and close the dataset
     H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memspace_id, fspace_id, plist_id,
              &grid[row_major_id_periodic(local_offset, 0, 0, grid_dim)]);
     H5Dclose(dset_id);
 
-    // reset the grid if needed
+    /* reset the grid if necessary */
     if (grid_type != VELOCITY_Z) {
       bzero(grid, n_grid_points * sizeof(double));
     }
