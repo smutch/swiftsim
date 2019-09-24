@@ -280,6 +280,8 @@ struct engine {
   double a_first_snapshot;
   double time_first_snapshot;
   double delta_time_snapshot;
+  int snapshot_dump_grids;
+  int snapshot_grid_dim;
 
   /* Output_List for the snapshots */
   struct output_list *output_list_snapshots;

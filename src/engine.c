@@ -4902,6 +4902,10 @@ void engine_init(struct engine *e, struct space *s, struct swift_params *params,
       parser_get_opt_param_int(params, "Snapshots:int_time_label_on", 0);
   e->snapshot_invoke_stf =
       parser_get_opt_param_int(params, "Snapshots:invoke_stf", 0);
+  e->snapshot_dump_grids =
+      parser_get_opt_param_int(params, "Snapshots:dump_grids", 0);
+  e->snapshot_grid_dim =
+      parser_get_opt_param_int(params, "Snapshots:grid_dim", 128);
   e->snapshot_units = (struct unit_system *)malloc(sizeof(struct unit_system));
   units_init_default(e->snapshot_units, params, "Snapshots", internal_units);
   e->snapshot_output_count = 0;

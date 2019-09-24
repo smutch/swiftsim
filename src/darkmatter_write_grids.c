@@ -97,14 +97,13 @@ static void construct_velocity_grid_mapper(void* restrict gparts_v, int N,
   }
 }
 
-// TODO(smutch): Remove asserts?
 void darkmatter_write_grids(struct engine* e, const size_t Npart,
                             const hid_t h_file,
                             const struct unit_system* internal_units,
                             const struct unit_system* snapshot_units) {
 
   struct gpart* gparts = e->s->gparts;
-  const int grid_dim = 16;  // TODO(smutch): Make this a variable
+  const int grid_dim = e->snapshot_grid_dim;
   const int n_grid_points = grid_dim * grid_dim * grid_dim;
   const double* box_size = e->s->dim;
   char dataset_name[DS_NAME_SIZE] = "";
