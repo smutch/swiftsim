@@ -182,6 +182,8 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
   extra_data.grid_dim = grid_dim;
   extra_data.n_grid_points = n_grid_points;
 
+  /* NOTE THE ORDER IS IMPORTANT HERE.  DENSITY must come first so that we have
+   * point_counts available to do the averaging of the velocities. */
   enum grid_types { DENSITY, VELOCITY_X, VELOCITY_Y, VELOCITY_Z };
 
   for (enum grid_types grid_type = DENSITY; grid_type <= VELOCITY_Z;
@@ -216,17 +218,15 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
         break;
     }
 
-    /* reduce the grids */
-    MPI_Allreduce(MPI_IN_PLACE, grid, n_grid_points, MPI_DOUBLE, MPI_SUM,
-                  MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, point_counts, n_grid_points, MPI_INT, MPI_SUM,
-                  MPI_COMM_WORLD);
-
     /* Do any necessary conversions */
     switch (grid_type) {
       double n_to_density;
       double unit_conv_factor;
       case DENSITY:
+        /* reduce the grid */
+        MPI_Allreduce(MPI_IN_PLACE, point_counts, n_grid_points, MPI_INT, MPI_SUM,
+                      MPI_COMM_WORLD);
+
         /* convert n_particles to density */
         unit_conv_factor = units_conversion_factor(
             internal_units, snapshot_units, UNIT_CONV_DENSITY);
@@ -240,6 +240,10 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
       case VELOCITY_X:
       case VELOCITY_Y:
       case VELOCITY_Z:
+        /* reduce the grid */
+        MPI_Allreduce(MPI_IN_PLACE, grid, n_grid_points, MPI_DOUBLE, MPI_SUM,
+                      MPI_COMM_WORLD);
+
         /* take the mean */
         unit_conv_factor = units_conversion_factor(
             internal_units, snapshot_units, UNIT_CONV_VELOCITY);
