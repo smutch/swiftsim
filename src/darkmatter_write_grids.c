@@ -153,7 +153,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
   int local_slab_size = grid_dim / n_ranks;
   int local_offset = local_slab_size * i_rank;
   if (i_rank == n_ranks - 1) {
-    local_slab_size = grid_dim - local_slab_size;
+    local_slab_size = grid_dim - local_offset;
   }
 
   /* create hdf5 properties, selections, etc. that will be used for all grid
