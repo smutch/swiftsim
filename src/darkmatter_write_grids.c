@@ -223,8 +223,8 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
       double unit_conv_factor;
       case DENSITY:
         /* reduce the grid */
-        MPI_Allreduce(MPI_IN_PLACE, point_counts, n_grid_points, MPI_INT, MPI_SUM,
-                      MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, point_counts, n_grid_points, MPI_INT,
+                      MPI_SUM, MPI_COMM_WORLD);
 
         /* convert n_particles to density */
         unit_conv_factor = units_conversion_factor(
