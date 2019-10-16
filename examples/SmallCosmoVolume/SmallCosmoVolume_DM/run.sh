@@ -8,4 +8,5 @@ then
 fi
 
 # Run SWIFT
-mpirun -n 2 ../../swift_mpi --cosmology --self-gravity --threads=1 small_cosmo_volume_dm.yml 2>&1 | tee output.log
+../../swift --cosmology --self-gravity --threads=8 small_cosmo_volume_dm.yml 2>&1 | tee output.log
+
