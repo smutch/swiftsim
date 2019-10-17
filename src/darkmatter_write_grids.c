@@ -286,9 +286,10 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
 
   hid_t dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
   H5Pset_chunk(dcpl_id, 3, (hsize_t[3]){1, grid_dim, grid_dim});
+  H5Pset_deflate(dcpl_id, 6);
 
   hid_t plist_id = H5Pcreate(H5P_DATASET_XFER);
-  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_INDEPENDENT);
+  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
 
   hsize_t start[3] = {local_offset, 0, 0};
   hsize_t count[3] = {local_slab_size, grid_dim, grid_dim};
@@ -408,7 +409,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
 
     /* reset the grid if necessary */
     if (grid_type != VELOCITY_Z) {
-      bzero(grid, n_grid_points * sizeof(double));
+      memset(grid, 0, n_grid_points * sizeof(double));
     }
   }
 
