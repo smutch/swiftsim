@@ -72,15 +72,14 @@ __attribute__((always_inline)) INLINE static void CIC_set(
                value * dx * dy * dz);
 }
 
-// TODO(smutch): Make this available from `mesh_gravity.c`
 /**
  * @brief Assigns a given #gpart property to a grid using the CIC method.
  *
  * @param gp The #gpart.
- * @param prop_offset The offset of the #gpart struct property to be gridded.
- * @param rho The density mesh.
- * @param dim the size of the mesh along each axis.
- * @param fac The width of a mesh cell.
+ * @param prop_offset The byte offset of the #gpart struct property to be gridded.
+ * @param grid The grid.
+ * @param dim the size of the grid along each axis.
+ * @param fac The width of the grid cells in each dimension.
  * @param box_size The dimensions of the simulation box.
  */
 __attribute__((always_inline)) INLINE static void part_to_grid_CIC(
@@ -120,6 +119,10 @@ __attribute__((always_inline)) INLINE static void part_to_grid_CIC(
   CIC_set(grid, dim, i, j, k, tx, ty, tz, dx, dy, dz, val);
 }
 
+/**
+ * @brief Shared information about the grid to be used by all the threads in the
+ * pool.
+ */
 struct gridding_extra_data {
   double cell_size[3];
   double box_size[3];
@@ -129,6 +132,13 @@ struct gridding_extra_data {
   int n_grid_points;
 };
 
+/**
+ * @brief Threadpool mapper function for the grid CIC assignment.
+ *
+ * @param gparts_v The #gpart array recast as a void pointer
+ * @param N The number of #gparts
+ * @param extra_data_v Extra data to be passed to the gridding
+ */
 static void construct_grid_CIC_mapper(void* restrict gparts_v, int N,
                                       void* restrict extra_data_v) {
 
@@ -151,6 +161,14 @@ static void construct_grid_CIC_mapper(void* restrict gparts_v, int N,
   }
 }
 
+/**
+ * @brief Find the grid index for a #gpart position.
+ *
+ * @param gp The #gpart.
+ * @param cell_size The size of each cell.
+ * @param grid_dim The dimensionality of the grid.
+ * @param n_grid_points The total number of points (cells) in the grid (used for checking).
+ */
 __attribute__((always_inline)) INLINE static int part_to_grid_index(
     const struct gpart* gp, const double cell_size[3], const double grid_dim,
     const int n_grid_points) {
@@ -166,6 +184,13 @@ __attribute__((always_inline)) INLINE static int part_to_grid_index(
   return index;
 }
 
+/**
+ * @brief Threadpool mapper function for the grid NGP assignment.
+ *
+ * @param gparts_v The #gpart array recast as a void pointer
+ * @param N The number of #gpart
+ * @param extra_data_v The #gridding_extra_data data to be passed to the gridding recast as a void pointer
+ */
 static void construct_grid_NGP_mapper(void* restrict gparts_v, int N,
                                       void* restrict extra_data_v) {
 
@@ -187,6 +212,15 @@ static void construct_grid_NGP_mapper(void* restrict gparts_v, int N,
   }
 }
 
+/**
+ * @brief Construct and write dark matter density and velocity grids.
+ *
+ * @param e The #engine.
+ * @param Npart The number of #gpart
+ * @param h_file The output HDF5 file handle.
+ * @param internal_units The #unit_system used internally.
+ * @param snapshot_units The #unit_system used in the snapshots.
+ */
 void darkmatter_write_grids(struct engine* e, const size_t Npart,
                             const hid_t h_file,
                             const struct unit_system* internal_units,
