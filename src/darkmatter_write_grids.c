@@ -6,6 +6,7 @@
 
 /* Local includes. */
 #include <mpi.h>
+#include <hdf5_hl.h>
 
 #include "error.h"
 #include "threadpool.h"
@@ -224,6 +225,9 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
   hid_t h_grp = H5Gcreate(h_file, group_name, H5P_DEFAULT, H5P_DEFAULT,
                           H5P_DEFAULT);
   if (h_grp < 0) error("Error while creating dark matter grids group.");
+    
+  /* attach an attribute with the gridding type */
+  H5LTset_attribute_string(h_file, group_name, "gridding_method", e->snapshot_grid_method);
 
   int i_rank, n_ranks;
   MPI_Comm_rank(MPI_COMM_WORLD, &i_rank);
@@ -270,9 +274,9 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
    * point_counts available to do the averaging of the velocities. */
   enum grid_types { DENSITY, VELOCITY_X, VELOCITY_Y, VELOCITY_Z };
 
-  void* construct_grid_mapper = construct_grid_NGP_mapper;
+  void (*construct_grid_mapper)(void* restrict, int, void* restrict) = &construct_grid_NGP_mapper;
   if (strncmp(e->snapshot_grid_method, "CIC", 3) == 0) {
-    construct_grid_mapper = construct_grid_CIC_mapper;
+    construct_grid_mapper = &construct_grid_CIC_mapper;
   } else if (strncmp(e->snapshot_grid_method, "NGP", 3) != 0) {
     message(
         "WARNING: Unknown snapshot gridding method (Snapshots:grid_method). "
@@ -286,35 +290,26 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
       case DENSITY:
         extra_data.grid = point_counts;
         extra_data.prop_offset = -1;
-        threadpool_map((struct threadpool*)&e->threadpool,
-                       construct_grid_mapper, gparts, Npart,
-                       sizeof(struct gpart), 0, (void*)&extra_data);
         break;
 
       case VELOCITY_X:
         extra_data.grid = grid;
         extra_data.prop_offset = offsetof(struct gpart, v_full[0]);
-        threadpool_map((struct threadpool*)&e->threadpool,
-                       construct_grid_mapper, gparts, Npart,
-                       sizeof(struct gpart), 0, (void*)&extra_data);
         break;
 
       case VELOCITY_Y:
         extra_data.grid = grid;
         extra_data.prop_offset = offsetof(struct gpart, v_full[1]);
-        threadpool_map((struct threadpool*)&e->threadpool,
-                       construct_grid_mapper, gparts, Npart,
-                       sizeof(struct gpart), 0, (void*)&extra_data);
         break;
 
       case VELOCITY_Z:
         extra_data.grid = grid;
         extra_data.prop_offset = offsetof(struct gpart, v_full[2]);
-        threadpool_map((struct threadpool*)&e->threadpool,
-                       construct_grid_mapper, gparts, Npart,
-                       sizeof(struct gpart), 0, (void*)&extra_data);
         break;
     }
+    threadpool_map((struct threadpool*)&e->threadpool,
+        construct_grid_mapper, gparts, Npart,
+        sizeof(struct gpart), 0, (void*)&extra_data);
 
     /* Do any necessary conversions */
     switch (grid_type) {
@@ -322,7 +317,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
       double unit_conv_factor;
       case DENSITY:
         /* reduce the grid */
-        MPI_Allreduce(MPI_IN_PLACE, point_counts, n_grid_points, MPI_INT,
+        MPI_Allreduce(MPI_IN_PLACE, point_counts, n_grid_points, MPI_DOUBLE,
                       MPI_SUM, MPI_COMM_WORLD);
 
         /* convert n_particles to density */
