@@ -268,11 +268,6 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
   MPI_Comm_size(MPI_COMM_WORLD, &n_ranks);
 
   /* split the write into slabs on the x axis */
-  {
-    // TODO(smutch): Deal with case when this isn't true.
-    int tmp = grid_dim % n_ranks;
-    assert(tmp == 0);
-  }
   int local_slab_size = grid_dim / n_ranks;
   int local_offset = local_slab_size * i_rank;
   if (i_rank == n_ranks - 1) {
