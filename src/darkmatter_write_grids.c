@@ -113,7 +113,7 @@ __attribute__((always_inline)) INLINE static void part_to_grid_CIC(
   if (k < 0 || k >= dim) error("Invalid gpart position in z");
 #endif
 
-  const double val = (prop_offset < 0) ? 1.0 : *(double*)(gp + prop_offset);
+  const double val = (prop_offset < 0) ? 1.0 : *(double*)((char *)gp + prop_offset);
 
   /* CIC ! */
   CIC_set(grid, dim, i, j, k, tx, ty, tz, dx, dy, dz, val);
@@ -181,7 +181,7 @@ static void construct_grid_NGP_mapper(void* restrict gparts_v, int N,
   for (int ii = 0; ii < N; ++ii) {
     const struct gpart* gp = &(gparts[ii]);
     int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_points);
-    const double val = (prop_offset < 0) ? 1.0 : *(double*)(gp + prop_offset);
+    const double val = (prop_offset < 0) ? 1.0 : *(double*)((char *)gp + prop_offset);
     atomic_add_d(&(grid[index]), val);
   }
 }
@@ -207,9 +207,7 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
   if (swift_memalign("writegrid", (void**)&grid, IO_BUFFER_ALIGNMENT,
                      n_grid_points * sizeof(double)) != 0)
     error("Failed to allocate output DM grids!");
-  for (int ii = 0; ii < n_grid_points; ++ii) {
-    grid[ii] = 0.0;
-  }
+  memset(grid, 0, n_grid_points * sizeof(double));
 
   /* Array to be used to store particle counts at all grid points. */
   double* point_counts = NULL;
@@ -217,12 +215,13 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
                      n_grid_points * sizeof(double)) != 0) {
     error("Failed to allocate point counts grids!");
   }
-  bzero(point_counts, n_grid_points * sizeof(double));
+  memset(point_counts, 0, n_grid_points * sizeof(double));
 
   /* Calculate information for the write that is not dependent on the property
      being written. */
 
-  hid_t h_grp = H5Gcreate(h_file, "/PartType1/Grids", H5P_DEFAULT, H5P_DEFAULT,
+  const char group_name[] = {"/PartType1/Grids"};
+  hid_t h_grp = H5Gcreate(h_file, group_name, H5P_DEFAULT, H5P_DEFAULT,
                           H5P_DEFAULT);
   if (h_grp < 0) error("Error while creating dark matter grids group.");
 
