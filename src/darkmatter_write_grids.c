@@ -371,7 +371,9 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
         unit_conv_factor = units_conversion_factor(
             internal_units, snapshot_units, UNIT_CONV_VELOCITY);
         for (int ii = 0; ii < n_grid_points; ++ii) {
-          grid[ii] *= unit_conv_factor / point_counts[ii];
+            if (point_counts[ii] > 0.0) {
+                grid[ii] *= unit_conv_factor / point_counts[ii];  
+            }
         }
         break;
     }
