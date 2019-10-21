@@ -113,7 +113,7 @@ __attribute__((always_inline)) INLINE static void part_to_grid_CIC(
   if (k < 0 || k >= dim) error("Invalid gpart position in z");
 #endif
 
-  const double val = (prop_offset < 0) ? 1.0 : *(double*)((char *)gp + prop_offset);
+  const double val = (prop_offset < 0) ? 1.0 : *(float*)((char *)gp + prop_offset);
 
   /* CIC ! */
   CIC_set(grid, dim, i, j, k, tx, ty, tz, dx, dy, dz, val);
@@ -207,7 +207,7 @@ static void construct_grid_NGP_mapper(void* restrict gparts_v, int N,
   for (int ii = 0; ii < N; ++ii) {
     const struct gpart* gp = &(gparts[ii]);
     int index = part_to_grid_index(gp, cell_size, grid_dim, n_grid_points);
-    const double val = (prop_offset < 0) ? 1.0 : *(double*)((char *)gp + prop_offset);
+    const double val = (prop_offset < 0) ? 1.0 : *(float*)((char *)gp + prop_offset);
     atomic_add_d(&(grid[index]), val);
   }
 }
@@ -281,7 +281,9 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
 
   hid_t dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
   H5Pset_chunk(dcpl_id, 3, (hsize_t[3]){1, grid_dim, grid_dim});
-  H5Pset_deflate(dcpl_id, 6);
+
+  /* Uncomment this line to enable compression. */
+  // H5Pset_deflate(dcpl_id, 6);
 
   hid_t plist_id = H5Pcreate(H5P_DATASET_XFER);
   H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
@@ -396,12 +398,18 @@ void darkmatter_write_grids(struct engine* e, const size_t Npart,
         break;
     }
 
+    /* we can use the same allocations but down cast the data to floats for writing */
+    float *f_grid = (float *)grid;
+    for(int ii=0; ii<n_grid_points; ++ii) {
+        f_grid[ii] = (float)grid[ii];
+    }
+
     /* actually do the write finally! */
-    hid_t dset_id = H5Dcreate(h_grp, dataset_name, H5T_NATIVE_DOUBLE, fspace_id,
+    hid_t dset_id = H5Dcreate(h_grp, dataset_name, H5T_NATIVE_FLOAT, fspace_id,
                               H5P_DEFAULT, dcpl_id, H5P_DEFAULT);
 
-    H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, memspace_id, fspace_id, plist_id,
-             &grid[row_major_id_periodic(local_offset, 0, 0, grid_dim)]);
+    H5Dwrite(dset_id, H5T_NATIVE_FLOAT, memspace_id, fspace_id, plist_id,
+             &f_grid[row_major_id_periodic(local_offset, 0, 0, grid_dim)]);
     H5Dclose(dset_id);
 
     /* reset the grid if necessary */
