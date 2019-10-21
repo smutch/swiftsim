@@ -163,6 +163,8 @@ tests/testCbrt
 tests/testFormat.sh
 tests/testCooling
 tests/testHashmap
+tests/testDarkMatterWriteGrids
+tests/testDarkMatterWriteGrids.h5
 tests/*.png
 tests/*.txt
 

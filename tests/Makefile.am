@@ -136,9 +136,10 @@ testFeedback_SOURCES = testFeedback.c
 
 testHashmap_SOURCES = testHashmap.c
 
+testDarkMatterWriteGrids_SOURCES = testDarkMatterWriteGrids.c
+
 testHydroMPIrules = testHydroMPIrules.c
 
-testDarkMatterWriteGrids = testDarkMatterWriteGrids.c
 
 # Files necessary for distribution
 EXTRA_DIST = testReading.sh makeInput.py testActivePair.sh \

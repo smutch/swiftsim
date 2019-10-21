@@ -1,4 +1,6 @@
 #include <hdf5.h>
+#include <hdf5_hl.h>
+
 #include "darkmatter_write_grids.h"
 
 int main(int argc, char *argv[])
@@ -29,8 +31,8 @@ int main(int argc, char *argv[])
   for(int ii=0; ii<3; ++ii) {
       space.dim[ii] = dim[ii];
   }
-  struct gpart gparts[Npart];
-  space.gparts = gparts;
+  struct gpart* gparts = calloc(Npart, sizeof(struct gpart));
+  space.gparts = (struct gpart*)gparts;
 
   for(int ii=0; ii<Npart; ++ii) {
       for(int jj=0; jj<3; ++jj) {
@@ -44,11 +46,14 @@ int main(int argc, char *argv[])
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
   hid_t h_file = H5Fcreate("testDarkMatterWriteGrids.h5", H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
   H5Pclose(plist_id);
+  hid_t h_grp = H5Gcreate(h_file, "PartType1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  H5Gclose(h_grp);
 
   darkmatter_write_grids(&engine, (size_t)Npart, h_file, &internal_units, &snapshot_units);
 
-  threadpool_clean(&engine.threadpool);
   H5Fclose(h_file);
+  free(gparts);
+  threadpool_clean(&engine.threadpool);
   MPI_Finalize();
 
   return EXIT_SUCCESS;
