@@ -6,8 +6,12 @@
 static char fname[] = {"testDarkMatterWriteGrids.h5"};
 static int grid_dim = 16;
 
-static int isclose(float x, float y) {
+static int isclose(double x, double y) {
   return (fabs(x - y) < 1e-8);
+}
+
+static int row_major_id_periodic(int i, int j, int k, int N) {
+    return (((i + N) % N) * N * N + ((j + N) % N) * N + ((k + N) % N));
 }
 
 static hid_t create_output_file(void) {
@@ -64,7 +68,7 @@ int main(int argc, char *argv[])
 
   float *res;
   if(i_rank == 0) {
-    res = calloc(grid_dim*grid_dim*grid_dim, sizeof(float));
+    res = calloc(n_cells, sizeof(float));
   }
 
   /* TEST CASE 1 */
@@ -85,6 +89,12 @@ int main(int argc, char *argv[])
 
       if (i_rank == 0) {
           read_results("Density", res);
+
+          float total = 0;
+          for(int ii=0; ii<n_cells; ++ii) {
+              total += res[ii];
+          }
+          assert(isclose(total, 0.8192f));
 
           assert(isclose(res[0], 0.8192f));
           for(int ii = 1; ii < n_cells; ++ii) {
@@ -107,6 +117,113 @@ int main(int argc, char *argv[])
           for(int ii = 1; ii < n_cells; ++ii) {
               assert(isclose(res[ii], 0.0f));
           }
+      }   
+  }
+
+  /* TEST CASE 2 */
+  {
+      snprintf(engine.snapshot_grid_method, 4, "CIC");
+      if (i_rank == 0) {
+          memset(res, 0, sizeof(float)*n_cells);
+      }
+
+      hid_t h_file = create_output_file();
+      darkmatter_write_grids(&engine, (size_t)Npart, h_file, &internal_units, &snapshot_units);
+      H5Fclose(h_file);
+
+      if (i_rank == 0) {
+          read_results("Density", res);
+
+          float total = 0;
+          for(int ii=0; ii<n_cells; ++ii) {
+              total += res[ii];
+          }
+          assert(isclose(total, 0.8192f));
+
+          assert(isclose(res[0], 0.8192f));
+          for(int ii = 1; ii < n_cells; ++ii) {
+              assert(isclose(res[ii], 0.0f));
+          }
+
+          read_results("Vx", res);
+          for(int ii = 0; ii < n_cells; ++ii) {
+              assert(isclose(res[ii], 0.0f));
+          }
+
+          read_results("Vy", res);
+          assert(isclose(res[0], 2.0f));
+          for(int ii = 1; ii < n_cells; ++ii) {
+              assert(isclose(res[ii], 0.0f));
+          }
+
+          read_results("Vz", res);
+          assert(isclose(res[0], 4.0f));
+          for(int ii = 1; ii < n_cells; ++ii) {
+              assert(isclose(res[ii], 0.0f));
+          }
+      }   
+  }
+
+  /* TEST CASE 3 */
+  {
+      snprintf(engine.snapshot_grid_method, 4, "NGP");
+      if (i_rank == 0) {
+          memset(res, 0, sizeof(float)*n_cells);
+      }
+
+      for(int ii=0; ii<Npart; ++ii) {
+          for(int jj=0; jj<3; ++jj) {
+              gparts[ii].x[jj] = (float)jj*2;
+              gparts[ii].v_full[jj] = 2. * jj;
+          }
+      }
+
+
+      hid_t h_file = create_output_file();
+      darkmatter_write_grids(&engine, (size_t)Npart, h_file, &internal_units, &snapshot_units);
+      H5Fclose(h_file);
+
+      if (i_rank == 0) {
+          read_results("Density", res);
+
+          float total = 0;
+          for(int ii=0; ii<n_cells; ++ii) {
+              total += res[ii];
+          }
+          assert(isclose(total, 0.8192f));
+          assert(isclose(res[row_major_id_periodic(0, 0, 1, grid_dim)], 0.8192f));
+
+          read_results("Vy", res);
+          assert(isclose(res[row_major_id_periodic(0, 0, 1, grid_dim)], 2.0f));
+
+          read_results("Vz", res);
+          assert(isclose(res[row_major_id_periodic(0, 0, 1, grid_dim)], 4.0f));
+      }   
+  }
+          
+  /* TEST CASE 4 */
+  {
+      snprintf(engine.snapshot_grid_method, 4, "CIC");
+      if (i_rank == 0) {
+          memset(res, 0, sizeof(float)*n_cells);
+      }
+
+      hid_t h_file = create_output_file();
+      darkmatter_write_grids(&engine, (size_t)Npart, h_file, &internal_units, &snapshot_units);
+      H5Fclose(h_file);
+
+      if (i_rank == 0) {
+          read_results("Density", res);
+
+          float total = 0;
+          for(int ii=0; ii<n_cells; ++ii) {
+              total += res[ii];
+          }
+          assert(isclose(total, 0.8192f));
+          assert(isclose(res[row_major_id_periodic(0, 0, 0, grid_dim)], 0.20054016f));
+          assert(isclose(res[row_major_id_periodic(0, 0, 1, grid_dim)], 0.35651584f));
+          assert(isclose(res[row_major_id_periodic(0, 1, 0, grid_dim)], 0.09437184f));
+          assert(isclose(res[row_major_id_periodic(0, 1, 1, grid_dim)], 0.16777216f));
       }   
   }
           
